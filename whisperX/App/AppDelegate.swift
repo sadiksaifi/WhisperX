@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let permissionManager = PermissionManager()
     private let modelRunner = ModelRunner()
     private let audioDeviceManager = AudioDeviceManager()
+    private let systemAudioMuter = SystemAudioMuter()
 
     // MARK: - Menu Items
 
@@ -471,6 +472,9 @@ extension AppDelegate: HotkeyServiceDelegate {
             await modelRunner.cancelCurrentTranscription()
         }
 
+        // Mute system audio to prevent background audio from being recorded
+        systemAudioMuter.muteSystemAudio()
+
         appState.recordingState = .recording
         appState.lastTranscription = nil  // Clear previous result
         showHUD()
@@ -487,6 +491,9 @@ extension AppDelegate: HotkeyServiceDelegate {
             appState.recordingState = .idle
             updateStatusMenuItem()
 
+            // Restore system audio on error
+            systemAudioMuter.restoreSystemAudio()
+
             // Delay hiding HUD to show "Error" feedback
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                 self?.hideHUD()
@@ -501,6 +508,9 @@ extension AppDelegate: HotkeyServiceDelegate {
             Logger.hotkey.debug("Not recording, ignoring release")
             return
         }
+
+        // Restore system audio now that recording is done
+        systemAudioMuter.restoreSystemAudio()
 
         do {
             let url = try audioRecorder.stopRecording()
