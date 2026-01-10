@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 import os
 
 /// Controller for the floating HUD panel.
@@ -7,6 +8,7 @@ import os
 @MainActor
 final class HUDWindowController: NSWindowController {
     private let appState: AppState
+    private var stateObservation: AnyCancellable?
 
     init(appState: AppState) {
         self.appState = appState
@@ -31,6 +33,21 @@ final class HUDWindowController: NSWindowController {
         panel.contentView = hostingView
 
         positionAtBottomCenter()
+        observeStateChanges()
+    }
+
+    /// Observe state changes to recenter HUD when content size changes.
+    private func observeStateChanges() {
+        // Use a timer to periodically check and recenter if visible
+        // This ensures the HUD stays centered when content changes
+        stateObservation = Timer.publish(every: 0.05, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self = self,
+                      let window = self.window,
+                      window.isVisible else { return }
+                self.positionAtBottomCenter()
+            }
     }
 
     @available(*, unavailable)
@@ -64,11 +81,14 @@ final class HUDWindowController: NSWindowController {
     /// then identifies which screen contains that point. If no screen contains
     /// the cursor (edge case), it falls back to `NSScreen.main`.
     private func positionAtBottomCenter() {
-        guard let window = window else { return }
+        guard let window = window,
+              let hostingView = window.contentView as? NSHostingView<HUDView> else { return }
+
+        // Force layout and get intrinsic content size
+        hostingView.layoutSubtreeIfNeeded()
+        let contentSize = hostingView.fittingSize
 
         // Find the screen containing the mouse cursor for multi-monitor support.
-        // This ensures the HUD appears on the active screen where the user is likely
-        // focused, rather than always appearing on the primary display.
         let mouseLocation = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { screen in
             NSMouseInRect(mouseLocation, screen.frame, false)
@@ -79,15 +99,19 @@ final class HUDWindowController: NSWindowController {
             return
         }
 
-        let screenFrame = targetScreen.visibleFrame
-        let windowSize = window.frame.size
+        let screenFrame = targetScreen.frame
+        let visibleFrame = targetScreen.visibleFrame
 
-        // Center horizontally, position 80 points from the bottom of the visible area.
-        // The visibleFrame excludes the menu bar and dock, so this positions the HUD
-        // just above the dock (if present) or near the bottom edge.
-        let x = screenFrame.midX - windowSize.width / 2
-        let y = screenFrame.minY + 80
+        // Calculate position: center of HUD aligns with center of screen
+        let hudWidth = contentSize.width
+        let hudHeight = contentSize.height
+        let screenCenterX = screenFrame.origin.x + screenFrame.width / 2
+        let x = screenCenterX - hudWidth / 2
+        let y = visibleFrame.minY + 40
 
-        window.setFrameOrigin(NSPoint(x: x, y: y))
+        // Set frame with exact size and position
+        // SwiftUI handles content animation, we just keep the window centered
+        let hudFrame = NSRect(x: x, y: y, width: hudWidth, height: hudHeight)
+        window.setFrame(hudFrame, display: false)
     }
 }

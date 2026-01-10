@@ -10,23 +10,23 @@ Complete the full flow: press → record → transcribe → copy to clipboard, w
 - Optional: sound/haptic cues for start/stop (HIG‑appropriate, minimal).
 
 ## TODOs
-- [ ] Build `TranscriptionPipeline` orchestration:
+- [x] Build `TranscriptionPipeline` orchestration:
   - Triggered on key release with audio URL.
   - Calls `WisprModelRunner` and stores last transcript.
   - Exposes state machine: idle → listening → transcribing → idle.
-- [ ] Add `ClipboardService`:
+- [x] Add `ClipboardService`:
   - Copy transcript to clipboard automatically if enabled.
   - Manual menu action copies last transcript.
-- [ ] Error handling UX:
+- [x] Error handling UX:
   - Non‑blocking alerts or menu bar status for failures.
   - Log full error details with actionable messages.
-- [ ] Add lightweight success feedback:
-  - Optional tiny HUD “Copied” toast.
+- [x] Add lightweight success feedback:
+  - Optional tiny HUD "Copied" toast.
   - Menu bar status updates.
-- [ ] Performance tuning:
+- [x] Performance tuning:
   - Avoid main‑thread work in transcription.
   - Ensure audio file cleanup after transcription completes.
-- [ ] Copy, edit, all user-facing strings/labels/button/etc:
+- [x] Copy, edit, all user-facing strings/labels/button/etc:
   - Replace developer-centric labels with natural, concise wording for Settings, menu bar, and HUD.
   - Keep text HIG-aligned (short labels, sentence-case where appropriate).
 

@@ -10,11 +10,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var onVisibilityChanged: ((Bool) -> Void)?
 
     private let settings: SettingsStore
+    private let appState: AppState
     private let permissionManager: PermissionManager
     private let audioDeviceManager: AudioDeviceManager
 
-    init(settings: SettingsStore, permissionManager: PermissionManager, audioDeviceManager: AudioDeviceManager) {
+    init(
+        settings: SettingsStore,
+        appState: AppState,
+        permissionManager: PermissionManager,
+        audioDeviceManager: AudioDeviceManager
+    ) {
         self.settings = settings
+        self.appState = appState
         self.permissionManager = permissionManager
         self.audioDeviceManager = audioDeviceManager
 
@@ -34,6 +41,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         let hostingView = NSHostingView(rootView: SettingsView(
             settings: settings,
+            appState: appState,
             permissionManager: permissionManager,
             audioDeviceManager: audioDeviceManager
         ))

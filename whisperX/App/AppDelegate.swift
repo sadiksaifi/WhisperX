@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         // Status row (non-interactive)
-        statusMenuItem = NSMenuItem(title: "Idle", action: nil, keyEquivalent: "")
+        statusMenuItem = NSMenuItem(title: "Ready", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
 
@@ -99,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Auto-copy toggle
         autoCopyMenuItem = NSMenuItem(
-            title: "Auto-copy to Clipboard",
+            title: "Auto Copy",
             action: #selector(toggleAutoCopy),
             keyEquivalent: ""
         )
@@ -134,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupWindowControllers() {
         settingsWindowController = SettingsWindowController(
             settings: settings,
+            appState: appState,
             permissionManager: permissionManager,
             audioDeviceManager: audioDeviceManager
         )
@@ -323,7 +324,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusMenuItem() {
         switch appState.recordingState {
         case .idle:
-            statusMenuItem.title = "Idle"
+            statusMenuItem.title = "Ready"
             statusItem.button?.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "WhisperX")
         case .recording:
             statusMenuItem.title = "Recording..."
@@ -391,7 +392,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     appState.lastTranscription = transcription
                     appState.recordingState = .idle
                     appState.isModelLoading = false
-                    hideHUD()
                     updateStatusMenuItem()
 
                     Logger.model.info("Transcription result: \(transcription.prefix(100))...")
@@ -399,6 +399,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     // Auto-copy to clipboard if enabled
                     if settings.copyToClipboard {
                         ClipboardService.shared.copy(transcription)
+                        appState.showCopiedFeedback()
+
+                        // Delay hiding HUD to show "Copied" feedback
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                            self?.hideHUD()
+                        }
 
                         // Paste after copy if enabled
                         if settings.pasteAfterCopy {
@@ -407,6 +413,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                 ClipboardService.shared.paste()
                             }
                         }
+                    } else {
+                        hideHUD()
                     }
 
                     // Clean up temp audio file
@@ -418,23 +426,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if case .transcriptionCancelled = error {
                         // Cancelled transcriptions don't show error
                         Logger.model.info("Transcription was cancelled")
+                        hideHUD()
                     } else {
                         appState.errorMessage = error.localizedDescription
+                        appState.showErrorFeedback()
                         Logger.model.error("Transcription error: \(error.localizedDescription)")
+
+                        // Delay hiding HUD to show "Error" feedback
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                            self?.hideHUD()
+                        }
                     }
                     appState.recordingState = .idle
                     appState.isModelLoading = false
-                    hideHUD()
                     updateStatusMenuItem()
                 }
             } catch {
                 await MainActor.run {
                     appState.errorMessage = "Transcription failed: \(error.localizedDescription)"
+                    appState.showErrorFeedback()
                     appState.recordingState = .idle
                     appState.isModelLoading = false
-                    hideHUD()
                     updateStatusMenuItem()
                     Logger.model.error("Unexpected transcription error: \(error)")
+
+                    // Delay hiding HUD to show "Error" feedback
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                        self?.hideHUD()
+                    }
                 }
             }
         }
@@ -464,9 +483,14 @@ extension AppDelegate: HotkeyServiceDelegate {
         } catch {
             Logger.audio.error("Failed to start recording: \(error)")
             appState.errorMessage = "Failed to start recording: \(error.localizedDescription)"
+            appState.showErrorFeedback()
             appState.recordingState = .idle
-            hideHUD()
             updateStatusMenuItem()
+
+            // Delay hiding HUD to show "Error" feedback
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                self?.hideHUD()
+            }
         }
     }
 
@@ -492,9 +516,14 @@ extension AppDelegate: HotkeyServiceDelegate {
         } catch {
             Logger.audio.error("Failed to stop recording: \(error)")
             appState.errorMessage = "Failed to stop recording: \(error.localizedDescription)"
+            appState.showErrorFeedback()
             appState.recordingState = .idle
-            hideHUD()
             updateStatusMenuItem()
+
+            // Delay hiding HUD to show "Error" feedback
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                self?.hideHUD()
+            }
         }
     }
 

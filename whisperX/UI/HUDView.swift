@@ -1,35 +1,36 @@
 import SwiftUI
 
-/// Floating HUD overlay shown during recording and transcription.
-/// Displays the current state and any transcription output.
+/// Minimal floating HUD overlay shown during recording and transcription.
+/// Displays only a state indicator (icon + one or two words).
 struct HUDView: View {
     @Bindable var appState: AppState
 
     var body: some View {
-        VStack(spacing: 12) {
-            statusIndicator
-            if let transcription = appState.lastTranscription {
-                Text(transcription)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineLimit(3)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .frame(minWidth: 200, maxWidth: 400)
+        statusIndicator
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .clipShape(Capsule())
+            .fixedSize()
     }
 
+    /// Status indicator with priority: error > copied > recording > transcribing > idle.
     @ViewBuilder
     private var statusIndicator: some View {
-        switch appState.recordingState {
-        case .idle:
-            EmptyView()
-        case .recording:
-            RecordingIndicator()
-        case .transcribing:
-            TranscribingIndicator()
+        switch appState.hudFeedback {
+        case .error:
+            ErrorIndicator()
+        case .copied:
+            CopiedIndicator()
+        case .none:
+            switch appState.recordingState {
+            case .idle:
+                EmptyView()
+            case .recording:
+                RecordingIndicator()
+            case .transcribing:
+                TranscribingIndicator()
+            }
         }
     }
 }
@@ -45,7 +46,7 @@ private struct RecordingIndicator: View {
         HStack(spacing: 8) {
             Circle()
                 .fill(.red)
-                .frame(width: 10, height: 10)
+                .frame(width: 8, height: 8)
                 .scaleEffect(isPulsing ? 1.3 : 1.0)
                 .opacity(isPulsing ? 0.7 : 1.0)
                 .animation(
@@ -54,7 +55,7 @@ private struct RecordingIndicator: View {
                     value: isPulsing
                 )
             Text("Listening...")
-                .font(.headline)
+                .font(.body)
         }
         .onAppear {
             isPulsing = true
@@ -71,7 +72,37 @@ private struct TranscribingIndicator: View {
             ProgressView()
                 .controlSize(.small)
             Text("Transcribing...")
-                .font(.headline)
+                .font(.body)
+        }
+    }
+}
+
+// MARK: - Copied Indicator
+
+/// Indicator shown briefly after successful clipboard copy.
+private struct CopiedIndicator: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.body)
+                .foregroundStyle(.secondary)
+            Text("Copied")
+                .font(.body)
+        }
+    }
+}
+
+// MARK: - Error Indicator
+
+/// Brief error indicator shown when transcription fails.
+private struct ErrorIndicator: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(.red)
+                .frame(width: 8, height: 8)
+            Text("Error")
+                .font(.body)
         }
     }
 }
@@ -94,11 +125,18 @@ private struct TranscribingIndicator: View {
     }())
 }
 
-#Preview("With Transcription") {
+#Preview("Copied") {
     HUDView(appState: {
         let state = AppState()
-        state.recordingState = .recording
-        state.lastTranscription = "Hello, this is a test transcription."
+        state.hudFeedback = .copied
+        return state
+    }())
+}
+
+#Preview("Error") {
+    HUDView(appState: {
+        let state = AppState()
+        state.hudFeedback = .error
         return state
     }())
 }

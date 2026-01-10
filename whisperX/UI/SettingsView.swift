@@ -6,11 +6,13 @@ import SwiftUI
 /// Each section is documented inline with its purpose.
 struct SettingsView: View {
     @Bindable var settings: SettingsStore
+    @Bindable var appState: AppState
     @Bindable var permissionManager: PermissionManager
     @Bindable var audioDeviceManager: AudioDeviceManager
 
     var body: some View {
         Form {
+            errorSection
             hotkeySection
             modelSection
             audioSection
@@ -27,6 +29,27 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Error Section
+
+    /// Displays current error message if any, with dismiss button.
+    @ViewBuilder
+    private var errorSection: some View {
+        if let error = appState.errorMessage {
+            Section {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    Text(error)
+                        .foregroundStyle(.secondary)
+                }
+                Button("Dismiss") {
+                    appState.clearError()
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+    }
+
     // MARK: - Hotkey Section
 
     /// Configure the push-to-talk hotkey and debounce timing.
@@ -38,7 +61,7 @@ struct SettingsView: View {
             )
 
             HStack {
-                Text("Debounce:")
+                Text("Hold delay:")
                 Picker("", selection: $settings.hotkeyDebounceMs) {
                     Text("50 ms").tag(50)
                     Text("100 ms").tag(100)
@@ -60,7 +83,7 @@ struct SettingsView: View {
                 .controlSize(.small)
             }
 
-            Text("Hold the key to record, release to stop.")
+            Text("Press and hold to record")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -103,10 +126,10 @@ struct SettingsView: View {
     /// Configure clipboard behavior after transcription.
     private var outputSection: some View {
         Section("Output") {
-            Toggle("Copy to Clipboard", isOn: $settings.copyToClipboard)
+            Toggle("Copy text automatically", isOn: $settings.copyToClipboard)
 
             if settings.copyToClipboard {
-                Toggle("Paste after copying", isOn: $settings.pasteAfterCopy)
+                Toggle("Auto Paste", isOn: $settings.pasteAfterCopy)
                     .padding(.leading, 20)
             }
         }
@@ -184,6 +207,7 @@ private struct PermissionRow: View {
 #Preview {
     SettingsView(
         settings: SettingsStore(),
+        appState: AppState(),
         permissionManager: PermissionManager(),
         audioDeviceManager: AudioDeviceManager()
     )
