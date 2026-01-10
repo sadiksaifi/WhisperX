@@ -1,62 +1,137 @@
 import SwiftUI
 
 /// Settings interface for configuring WhisperX preferences.
+///
+/// Organized into sections for Hotkey, Model, Audio, Output, and Permissions.
+/// Each section is documented inline with its purpose.
 struct SettingsView: View {
     @Bindable var settings: SettingsStore
     @Bindable var permissionManager: PermissionManager
+    @Bindable var audioDeviceManager: AudioDeviceManager
 
     var body: some View {
         Form {
-            Section("Hotkey") {
-                HStack {
-                    Text("Push-to-talk key:")
-                    Spacer()
-                    Text("Right Option (⌥)")
-                        .foregroundStyle(.secondary)
-                }
-                Text("Hold the key to record, release to stop.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Model") {
-                Picker("Whisper Model", selection: $settings.modelVariant) {
-                    ForEach(WhisperModel.allCases, id: \.self) { model in
-                        Text(model.displayName).tag(model)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-
-            Section("Audio") {
-                Text("Audio input device selection")
-                    .foregroundStyle(.secondary)
-                // TODO: Add device picker in Step 3
-            }
-
-            Section("Output") {
-                Toggle("Copy to Clipboard", isOn: $settings.copyToClipboard)
-            }
-
-            Section("Permissions") {
-                VStack(alignment: .leading, spacing: 12) {
-                    PermissionRow(
-                        title: "Microphone",
-                        description: "Required to record audio for transcription.",
-                        status: permissionManager.microphoneStatus,
-                        onFix: { permissionManager.openMicrophoneSettings() }
-                    )
-                    PermissionRow(
-                        title: "Input Monitoring",
-                        description: "Required to detect the global hotkey.",
-                        status: permissionManager.accessibilityStatus,
-                        onFix: { permissionManager.openAccessibilitySettings() }
-                    )
-                }
-            }
+            hotkeySection
+            modelSection
+            audioSection
+            outputSection
+            permissionsSection
         }
         .formStyle(.grouped)
-        .frame(width: 400, height: 420)
+        .frame(width: 450, height: 520)
+        .onAppear {
+            audioDeviceManager.startMonitoring()
+        }
+        .onDisappear {
+            audioDeviceManager.stopMonitoring()
+        }
+    }
+
+    // MARK: - Hotkey Section
+
+    /// Configure the push-to-talk hotkey and debounce timing.
+    private var hotkeySection: some View {
+        Section("Hotkey") {
+            HotkeyPickerView(
+                keyCode: $settings.hotkeyKeyCode,
+                modifiers: $settings.hotkeyModifiers
+            )
+
+            HStack {
+                Text("Debounce:")
+                Picker("", selection: $settings.hotkeyDebounceMs) {
+                    Text("50 ms").tag(50)
+                    Text("100 ms").tag(100)
+                    Text("150 ms").tag(150)
+                    Text("200 ms").tag(200)
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(width: 100)
+
+                Spacer()
+
+                Button("Reset to Default") {
+                    settings.hotkeyKeyCode = SettingsStore.defaultHotkeyKeyCode
+                    settings.hotkeyModifiers = SettingsStore.defaultHotkeyModifiers
+                    settings.hotkeyDebounceMs = SettingsStore.defaultDebounceMs
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+            Text("Hold the key to record, release to stop.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Model Section
+
+    /// Select the Whisper model variant with descriptors.
+    private var modelSection: some View {
+        Section("Model") {
+            Picker("Whisper Model", selection: $settings.modelVariant) {
+                ForEach(WhisperModel.allCases, id: \.self) { model in
+                    Text(model.displayName).tag(model)
+                }
+            }
+            .pickerStyle(.menu)
+
+            ModelDescriptorView(model: settings.modelVariant)
+
+            Text(settings.modelVariant.recommendedUseCase)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Audio Section
+
+    /// Select the audio input device.
+    private var audioSection: some View {
+        Section("Audio Input") {
+            AudioDevicePickerView(
+                selectedDeviceID: $settings.audioDeviceID,
+                devices: audioDeviceManager.inputDevices
+            )
+        }
+    }
+
+    // MARK: - Output Section
+
+    /// Configure clipboard behavior after transcription.
+    private var outputSection: some View {
+        Section("Output") {
+            Toggle("Copy to Clipboard", isOn: $settings.copyToClipboard)
+
+            if settings.copyToClipboard {
+                Toggle("Paste after copying", isOn: $settings.pasteAfterCopy)
+                    .padding(.leading, 20)
+            }
+        }
+    }
+
+    // MARK: - Permissions Section
+
+    /// Display permission status with fix actions.
+    private var permissionsSection: some View {
+        Section("Permissions") {
+            VStack(alignment: .leading, spacing: 12) {
+                PermissionRow(
+                    title: "Microphone",
+                    description: "Required to record audio for transcription.",
+                    status: permissionManager.microphoneStatus,
+                    onFix: { permissionManager.openMicrophoneSettings() }
+                )
+                PermissionRow(
+                    title: "Input Monitoring",
+                    description: "Required to detect the global hotkey.",
+                    status: permissionManager.accessibilityStatus,
+                    onFix: { permissionManager.openAccessibilitySettings() }
+                )
+            }
+        }
     }
 }
 
@@ -107,5 +182,9 @@ private struct PermissionRow: View {
 }
 
 #Preview {
-    SettingsView(settings: SettingsStore(), permissionManager: PermissionManager())
+    SettingsView(
+        settings: SettingsStore(),
+        permissionManager: PermissionManager(),
+        audioDeviceManager: AudioDeviceManager()
+    )
 }

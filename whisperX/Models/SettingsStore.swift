@@ -11,10 +11,19 @@ final class SettingsStore {
     private enum Keys {
         static let hotkeyKeyCode = "hotkeyKeyCode"
         static let hotkeyModifiers = "hotkeyModifiers"
+        static let hotkeyDebounceMs = "hotkeyDebounceMs"
         static let modelVariant = "modelVariant"
         static let audioDeviceID = "audioDeviceID"
         static let copyToClipboard = "copyToClipboard"
+        static let pasteAfterCopy = "pasteAfterCopy"
     }
+
+    // MARK: - Defaults
+
+    /// Default hotkey: Right Option key (keyCode 61).
+    static let defaultHotkeyKeyCode: UInt16 = 61
+    static let defaultHotkeyModifiers: UInt = 0
+    static let defaultDebounceMs: Int = 100
 
     // MARK: - Properties
 
@@ -26,6 +35,12 @@ final class SettingsStore {
     /// Modifier flags for the hotkey (e.g., NSEvent.ModifierFlags.control.rawValue).
     var hotkeyModifiers: UInt {
         didSet { defaults.set(hotkeyModifiers, forKey: Keys.hotkeyModifiers) }
+    }
+
+    /// Debounce interval in milliseconds before recording starts (default 100ms).
+    /// Prevents accidental starts from quick taps.
+    var hotkeyDebounceMs: Int {
+        didSet { defaults.set(hotkeyDebounceMs, forKey: Keys.hotkeyDebounceMs) }
     }
 
     /// Selected Whisper model variant.
@@ -43,6 +58,12 @@ final class SettingsStore {
         didSet { defaults.set(copyToClipboard, forKey: Keys.copyToClipboard) }
     }
 
+    /// Whether to automatically paste after copying to clipboard.
+    /// Requires `copyToClipboard` to be enabled.
+    var pasteAfterCopy: Bool {
+        didSet { defaults.set(pasteAfterCopy, forKey: Keys.pasteAfterCopy) }
+    }
+
     // MARK: - Private
 
     private let defaults: UserDefaults
@@ -54,8 +75,12 @@ final class SettingsStore {
         self.defaults = defaults
 
         // Load persisted values with sensible defaults
-        self.hotkeyKeyCode = UInt16(defaults.integer(forKey: Keys.hotkeyKeyCode))
+        let storedKeyCode = defaults.integer(forKey: Keys.hotkeyKeyCode)
+        self.hotkeyKeyCode = storedKeyCode > 0 ? UInt16(storedKeyCode) : Self.defaultHotkeyKeyCode
         self.hotkeyModifiers = UInt(defaults.integer(forKey: Keys.hotkeyModifiers))
+
+        let storedDebounce = defaults.integer(forKey: Keys.hotkeyDebounceMs)
+        self.hotkeyDebounceMs = storedDebounce > 0 ? storedDebounce : Self.defaultDebounceMs
 
         if let variantRaw = defaults.string(forKey: Keys.modelVariant),
            let variant = WhisperModel(rawValue: variantRaw) {
@@ -66,5 +91,6 @@ final class SettingsStore {
 
         self.audioDeviceID = defaults.string(forKey: Keys.audioDeviceID)
         self.copyToClipboard = defaults.object(forKey: Keys.copyToClipboard) as? Bool ?? true
+        self.pasteAfterCopy = defaults.object(forKey: Keys.pasteAfterCopy) as? Bool ?? false
     }
 }

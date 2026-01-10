@@ -41,23 +41,24 @@ protocol HotkeyServiceDelegate: AnyObject {
 final class HotkeyService {
     // MARK: - Configuration
 
-    /// Debounce interval in seconds.
-    /// Recording only starts if the key is held for this duration.
-    /// This prevents accidental starts from quick taps.
-    static let debounceInterval: TimeInterval = 0.1
+    /// Default debounce interval in seconds.
+    static let defaultDebounceInterval: TimeInterval = 0.1
 
-    /// Primary key code: Right Option key (keyCode 61).
+    /// Default key code: Right Option key (keyCode 61).
     /// Right Option is ideal for push-to-talk: easy to reach, rarely used alone,
     /// and properly supports hold behavior unlike the Globe key.
     ///
     /// Note: Globe key (179) does NOT support hold - it only sends instant down/up pairs.
-    static let primaryKeyCode: CGKeyCode = 61  // Right Option
-
-    /// Alternative: Right Command key (keyCode 54)
-    static let alternativeKeyCode: CGKeyCode = 54
+    static let defaultKeyCode: CGKeyCode = 61  // Right Option
 
     /// Fallback key code: F13 (reliably capturable on all Macs).
     static let fallbackKeyCode: CGKeyCode = 105
+
+    /// Debounce interval in seconds.
+    /// Recording only starts if the key is held for this duration.
+    /// This prevents accidental starts from quick taps.
+    /// Can be updated at runtime; takes effect on next key press.
+    var debounceInterval: TimeInterval
 
     // MARK: - State
 
@@ -75,16 +76,51 @@ final class HotkeyService {
     /// The key code currently being monitored.
     private(set) var activeKeyCode: CGKeyCode
 
+    /// The modifier flags required for the hotkey (0 for no modifiers).
+    private(set) var activeModifiers: UInt
+
     /// Whether the service is currently running.
     private(set) var isRunning = false
 
     // MARK: - Initialization
 
     /// Creates a new hotkey service.
-    /// - Parameter delegate: The delegate to receive hotkey events.
-    init(delegate: HotkeyServiceDelegate?) {
+    /// - Parameters:
+    ///   - delegate: The delegate to receive hotkey events.
+    ///   - keyCode: The initial key code to monitor (default: Right Option).
+    ///   - modifiers: The modifier flags required (default: none).
+    ///   - debounceInterval: Debounce interval in seconds (default: 0.1).
+    init(
+        delegate: HotkeyServiceDelegate?,
+        keyCode: CGKeyCode = defaultKeyCode,
+        modifiers: UInt = 0,
+        debounceInterval: TimeInterval = defaultDebounceInterval
+    ) {
         self.delegate = delegate
-        self.activeKeyCode = Self.primaryKeyCode
+        self.activeKeyCode = keyCode
+        self.activeModifiers = modifiers
+        self.debounceInterval = debounceInterval
+    }
+
+    /// Updates the active hotkey configuration.
+    /// If the service is running, it will be restarted with the new configuration.
+    /// - Parameters:
+    ///   - keyCode: The new key code to monitor.
+    ///   - modifiers: The new modifier flags required (default: none).
+    func updateHotkey(keyCode: CGKeyCode, modifiers: UInt = 0) {
+        let wasRunning = isRunning
+        if wasRunning {
+            stop()
+        }
+
+        activeKeyCode = keyCode
+        activeModifiers = modifiers
+
+        Logger.hotkey.info("Hotkey updated to keyCode=\(keyCode), modifiers=\(modifiers)")
+
+        if wasRunning {
+            _ = start()
+        }
     }
 
     deinit {
@@ -107,11 +143,10 @@ final class HotkeyService {
             return false
         }
 
-        // Try to create event tap for primary key first
-        activeKeyCode = Self.primaryKeyCode
+        // Try to create event tap for the configured key
         if !createAndStartEventTap() {
-            // Fall back to F13
-            Logger.hotkey.warning("Failed to create event tap for Globe key, falling back to F13")
+            // Fall back to F13 if the configured key fails
+            Logger.hotkey.warning("Failed to create event tap for keyCode \(self.activeKeyCode), falling back to F13")
             activeKeyCode = Self.fallbackKeyCode
             if !createAndStartEventTap() {
                 Logger.hotkey.error("Failed to create event tap for fallback key")
@@ -120,7 +155,7 @@ final class HotkeyService {
         }
 
         isRunning = true
-        Logger.hotkey.info("Hotkey service started (key code: \(self.activeKeyCode))")
+        Logger.hotkey.info("Hotkey service started (key code: \(self.activeKeyCode), debounce: \(self.debounceInterval)s)")
         return true
     }
 
@@ -305,7 +340,7 @@ final class HotkeyService {
         hasPassedDebounce = false
         keyDownTime = Date()
 
-        Logger.hotkey.info("Key down detected, starting debounce (100ms)")
+        Logger.hotkey.info("Key down detected, starting debounce (\(Int(self.debounceInterval * 1000))ms)")
 
         // Cancel any existing debounce
         debounceWorkItem?.cancel()
@@ -332,7 +367,7 @@ final class HotkeyService {
         }
 
         debounceWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.debounceInterval, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + debounceInterval, execute: workItem)
     }
 
     /// Handles key up event.
@@ -358,7 +393,7 @@ final class HotkeyService {
                 }
             }
         } else {
-            Logger.hotkey.debug("Key released before debounce (\(String(format: "%.0f", holdDuration))ms < 100ms), ignoring")
+            Logger.hotkey.debug("Key released before debounce (\(String(format: "%.0f", holdDuration))ms < \(Int(self.debounceInterval * 1000))ms), ignoring")
         }
 
         hasPassedDebounce = false

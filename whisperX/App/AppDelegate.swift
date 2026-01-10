@@ -23,6 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var audioRecorder: AudioRecorder!
     private let permissionManager = PermissionManager()
     private let modelRunner = ModelRunner()
+    private let audioDeviceManager = AudioDeviceManager()
+
+    // MARK: - Menu Items
+
+    private var statusMenuItem: NSMenuItem!
+    private var copyLastMenuItem: NSMenuItem!
+    private var autoCopyMenuItem: NSMenuItem!
 
     /// Window controller for permission guidance dialogs.
     private var permissionWindowController: NSWindowController?
@@ -61,7 +68,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupServices() {
         audioRecorder = AudioRecorder()
-        hotkeyService = HotkeyService(delegate: self)
+
+        // Configure hotkey from settings
+        hotkeyService = HotkeyService(
+            delegate: self,
+            keyCode: CGKeyCode(settings.hotkeyKeyCode),
+            modifiers: settings.hotkeyModifiers,
+            debounceInterval: TimeInterval(settings.hotkeyDebounceMs) / 1000.0
+        )
 
         Logger.app.debug("Services initialized")
     }
@@ -71,20 +85,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "WhisperX")
+            button.image?.isTemplate = true // Ensure monochrome template
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ","))
+
+        // Status row (non-interactive)
+        statusMenuItem = NSMenuItem(title: "Idle", action: nil, keyEquivalent: "")
+        statusMenuItem.isEnabled = false
+        menu.addItem(statusMenuItem)
+
         menu.addItem(.separator())
+
+        // Auto-copy toggle
+        autoCopyMenuItem = NSMenuItem(
+            title: "Auto-copy to Clipboard",
+            action: #selector(toggleAutoCopy),
+            keyEquivalent: ""
+        )
+        autoCopyMenuItem.state = settings.copyToClipboard ? .on : .off
+        menu.addItem(autoCopyMenuItem)
+
+        menu.addItem(.separator())
+
+        // Copy last transcript
+        copyLastMenuItem = NSMenuItem(
+            title: "Copy Last Transcript",
+            action: #selector(copyLastTranscript),
+            keyEquivalent: "c"
+        )
+        copyLastMenuItem.keyEquivalentModifierMask = [.command, .shift]
+        copyLastMenuItem.isEnabled = false // Initially disabled
+        menu.addItem(copyLastMenuItem)
+
+        // Settings
+        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ","))
+
+        menu.addItem(.separator())
+
+        // Quit
         menu.addItem(NSMenuItem(title: "Quit WhisperX", action: #selector(quitApp), keyEquivalent: "q"))
 
         statusItem.menu = menu
 
-        Logger.app.debug("Status item configured")
+        Logger.app.debug("Status item configured with expanded menu")
     }
 
     private func setupWindowControllers() {
-        settingsWindowController = SettingsWindowController(settings: settings, permissionManager: permissionManager)
+        settingsWindowController = SettingsWindowController(
+            settings: settings,
+            permissionManager: permissionManager,
+            audioDeviceManager: audioDeviceManager
+        )
         settingsWindowController.onVisibilityChanged = { [weak self] visible in
             self?.handleSettingsVisibilityChanged(visible)
         }
@@ -226,6 +278,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Applies current hotkey settings to the hotkey service.
+    /// Called when settings window closes to pick up any changes.
+    private func applyHotkeySettings() {
+        hotkeyService.debounceInterval = TimeInterval(settings.hotkeyDebounceMs) / 1000.0
+        hotkeyService.updateHotkey(
+            keyCode: CGKeyCode(settings.hotkeyKeyCode),
+            modifiers: settings.hotkeyModifiers
+        )
+        Logger.hotkey.debug("Applied hotkey settings: keyCode=\(self.settings.hotkeyKeyCode), debounce=\(self.settings.hotkeyDebounceMs)ms")
+    }
+
     // MARK: - Actions
 
     @objc private func showSettings() {
@@ -240,13 +303,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 
+    @objc private func toggleAutoCopy() {
+        settings.copyToClipboard.toggle()
+        autoCopyMenuItem.state = settings.copyToClipboard ? .on : .off
+        Logger.app.debug("Auto-copy toggled: \(self.settings.copyToClipboard)")
+    }
+
+    @objc private func copyLastTranscript() {
+        guard let text = appState.lastTranscription else {
+            Logger.clipboard.debug("No transcript to copy")
+            return
+        }
+        ClipboardService.shared.copy(text)
+    }
+
+    // MARK: - Menu State
+
+    /// Updates the status menu item based on current state.
+    private func updateStatusMenuItem() {
+        switch appState.recordingState {
+        case .idle:
+            statusMenuItem.title = "Idle"
+            statusItem.button?.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "WhisperX")
+        case .recording:
+            statusMenuItem.title = "Recording..."
+            statusItem.button?.image = NSImage(systemSymbolName: "waveform.circle.fill", accessibilityDescription: "Recording")
+        case .transcribing:
+            statusMenuItem.title = "Transcribing..."
+            statusItem.button?.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: "Transcribing")
+        }
+        statusItem.button?.image?.isTemplate = true
+
+        // Enable copy menu item if we have a transcript
+        copyLastMenuItem.isEnabled = appState.lastTranscription != nil
+    }
+
     // MARK: - Window Management
 
     private func handleSettingsVisibilityChanged(_ visible: Bool) {
         if visible {
             // Already in regular mode from showSettings
         } else {
-            // Settings closed, return to accessory mode if no other windows
+            // Settings closed, apply any changes and return to accessory mode
+            applyHotkeySettings()
+
+            // Sync auto-copy menu state with settings
+            autoCopyMenuItem.state = settings.copyToClipboard ? .on : .off
+
             DispatchQueue.main.async {
                 NSApp.setActivationPolicy(.accessory)
             }
@@ -270,6 +373,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Starts transcription of the recorded audio.
     private func startTranscription(audioURL: URL) {
         appState.recordingState = .transcribing
+        updateStatusMenuItem()
 
         Task {
             do {
@@ -288,8 +392,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     appState.recordingState = .idle
                     appState.isModelLoading = false
                     hideHUD()
+                    updateStatusMenuItem()
 
                     Logger.model.info("Transcription result: \(transcription.prefix(100))...")
+
+                    // Auto-copy to clipboard if enabled
+                    if settings.copyToClipboard {
+                        ClipboardService.shared.copy(transcription)
+
+                        // Paste after copy if enabled
+                        if settings.pasteAfterCopy {
+                            // Small delay to ensure clipboard is ready
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                ClipboardService.shared.paste()
+                            }
+                        }
+                    }
 
                     // Clean up temp audio file
                     try? FileManager.default.removeItem(at: audioURL)
@@ -307,6 +425,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     appState.recordingState = .idle
                     appState.isModelLoading = false
                     hideHUD()
+                    updateStatusMenuItem()
                 }
             } catch {
                 await MainActor.run {
@@ -314,6 +433,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     appState.recordingState = .idle
                     appState.isModelLoading = false
                     hideHUD()
+                    updateStatusMenuItem()
                     Logger.model.error("Unexpected transcription error: \(error)")
                 }
             }
@@ -335,6 +455,7 @@ extension AppDelegate: HotkeyServiceDelegate {
         appState.recordingState = .recording
         appState.lastTranscription = nil  // Clear previous result
         showHUD()
+        updateStatusMenuItem()
 
         do {
             let url = try audioRecorder.startRecording()
@@ -345,6 +466,7 @@ extension AppDelegate: HotkeyServiceDelegate {
             appState.errorMessage = "Failed to start recording: \(error.localizedDescription)"
             appState.recordingState = .idle
             hideHUD()
+            updateStatusMenuItem()
         }
     }
 
@@ -372,6 +494,7 @@ extension AppDelegate: HotkeyServiceDelegate {
             appState.errorMessage = "Failed to stop recording: \(error.localizedDescription)"
             appState.recordingState = .idle
             hideHUD()
+            updateStatusMenuItem()
         }
     }
 

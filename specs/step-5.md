@@ -26,12 +26,16 @@ Complete the full flow: press → record → transcribe → copy to clipboard, w
 - [ ] Performance tuning:
   - Avoid main‑thread work in transcription.
   - Ensure audio file cleanup after transcription completes.
+- [ ] Copy, edit, all user-facing strings/labels/button/etc:
+  - Replace developer-centric labels with natural, concise wording for Settings, menu bar, and HUD.
+  - Keep text HIG-aligned (short labels, sentence-case where appropriate).
 
 ## Verification plan (human)
 - Full press‑to‑talk flow produces transcript and copies to clipboard.
 - Menu item “Copy last transcript” works.
 - Errors (missing model, permissions) show clear guidance without crashing.
 - No HUD remains stuck on screen after errors.
+- Labels in Settings, menu bar, and HUD read naturally and feel Apple‑native.
 
 ## Agent documentation requirements
 - Document the pipeline state machine and transitions in code.

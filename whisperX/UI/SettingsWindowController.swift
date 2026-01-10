@@ -11,13 +11,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     private let settings: SettingsStore
     private let permissionManager: PermissionManager
+    private let audioDeviceManager: AudioDeviceManager
 
-    init(settings: SettingsStore, permissionManager: PermissionManager) {
+    init(settings: SettingsStore, permissionManager: PermissionManager, audioDeviceManager: AudioDeviceManager) {
         self.settings = settings
         self.permissionManager = permissionManager
+        self.audioDeviceManager = audioDeviceManager
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: true
@@ -30,7 +32,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         window.delegate = self
 
-        let hostingView = NSHostingView(rootView: SettingsView(settings: settings, permissionManager: permissionManager))
+        let hostingView = NSHostingView(rootView: SettingsView(
+            settings: settings,
+            permissionManager: permissionManager,
+            audioDeviceManager: audioDeviceManager
+        ))
         window.contentView = hostingView
     }
 
