@@ -51,12 +51,40 @@ final class HUDWindowController: NSWindowController {
         Logger.ui.debug("HUD hidden")
     }
 
+    /// Positions the HUD at the bottom center of the active screen.
+    ///
+    /// ## Multi-Screen Behavior
+    /// The HUD appears on the screen where the mouse cursor is currently located.
+    /// This ensures the HUD is visible on the display the user is actively using,
+    /// rather than always appearing on the primary display. This is particularly
+    /// important for users with multi-monitor setups where the primary display
+    /// may not be the one they're currently focused on.
+    ///
+    /// The positioning uses `NSEvent.mouseLocation` to find the cursor location,
+    /// then identifies which screen contains that point. If no screen contains
+    /// the cursor (edge case), it falls back to `NSScreen.main`.
     private func positionAtBottomCenter() {
-        guard let window = window, let screen = NSScreen.main else { return }
+        guard let window = window else { return }
 
-        let screenFrame = screen.visibleFrame
+        // Find the screen containing the mouse cursor for multi-monitor support.
+        // This ensures the HUD appears on the active screen where the user is likely
+        // focused, rather than always appearing on the primary display.
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { screen in
+            NSMouseInRect(mouseLocation, screen.frame, false)
+        } ?? NSScreen.main ?? NSScreen.screens.first
+
+        guard let targetScreen = screen else {
+            Logger.ui.warning("No screen available for HUD positioning")
+            return
+        }
+
+        let screenFrame = targetScreen.visibleFrame
         let windowSize = window.frame.size
 
+        // Center horizontally, position 80 points from the bottom of the visible area.
+        // The visibleFrame excludes the menu bar and dock, so this positions the HUD
+        // just above the dock (if present) or near the bottom edge.
         let x = screenFrame.midX - windowSize.width / 2
         let y = screenFrame.minY + 80
 

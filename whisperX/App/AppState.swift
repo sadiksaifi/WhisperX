@@ -16,6 +16,10 @@ final class AppState {
 
     /// Error message to display, if any.
     var errorMessage: String?
+
+    /// URL of the most recent audio recording, if any.
+    /// Set after recording stops, used by the transcription pipeline.
+    var lastRecordingURL: URL?
 }
 
 // MARK: - RecordingState

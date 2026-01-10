@@ -10,12 +10,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var onVisibilityChanged: ((Bool) -> Void)?
 
     private let settings: SettingsStore
+    private let permissionManager: PermissionManager
 
-    init(settings: SettingsStore) {
+    init(settings: SettingsStore, permissionManager: PermissionManager) {
         self.settings = settings
+        self.permissionManager = permissionManager
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 420),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: true
@@ -28,7 +30,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         window.delegate = self
 
-        let hostingView = NSHostingView(rootView: SettingsView(settings: settings))
+        let hostingView = NSHostingView(rootView: SettingsView(settings: settings, permissionManager: permissionManager))
         window.contentView = hostingView
     }
 
@@ -39,6 +41,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     /// Shows the settings window and notifies the delegate.
     func showSettings() {
+        // Refresh permission status when showing settings
+        permissionManager.refreshAccessibilityStatus()
+        permissionManager.refreshMicrophoneStatus()
+
         window?.center()
         window?.makeKeyAndOrderFront(nil)
         onVisibilityChanged?(true)

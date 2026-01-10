@@ -1,7 +1,7 @@
 # Step 2 — Global hotkey + push‑to‑talk audio capture + HUD
 
 ## Goal
-Implement the core “press to talk” interaction: global hotkey detection, start/stop recording on press/release, and display a HUD indicator while listening.
+Implement the core "press to talk" interaction: global hotkey detection, start/stop recording on press/release, and display a HUD indicator while listening.
 
 ## Deliverables
 - `HotkeyService` that listens for a configured key globally (press + release).
@@ -10,50 +10,55 @@ Implement the core “press to talk” interaction: global hotkey detection, sta
 - Integration glue: `AppDelegate`/`AppState` hooks services together.
 
 ## TODOs
-- [ ] Implement `HotkeyService` using `CGEventTap` for global key events:
+- [x] Implement `HotkeyService` using `CGEventTap` for global key events:
   - Map `SettingsStore.hotkey` into `CGKeyCode` + modifiers.
   - Ignore key repeats; react only on initial down and corresponding up.
   - Provide delegate/closure callbacks for `onPress`/`onRelease`.
   - Handle tap failure/re‑enable logic and surface errors to logs.
-- [ ] Hardcode the invoke key to Globe/Fn for this step:
-  - Use the best-available capture approach and document any OS limitations.
-  - If Globe/Fn cannot be captured directly, fall back to a nearby function key and log a warning.
-- [ ] Add a 100 ms debounce before starting recording:
+- [x] Hardcode the invoke key to Right Option for this step:
+  - Globe/Fn key (keyCode 179) does NOT support hold behavior on Apple Silicon Macs—it only sends instant down/up pairs.
+  - Right Option key (keyCode 61) properly supports hold behavior and is ideal for push-to-talk.
+  - Modifier keys require `flagsChanged` event handling, not `keyDown`/`keyUp`.
+- [x] Add a 100 ms debounce before starting recording:
   - Only start recording if the key is still held after the debounce interval.
   - Cancel the pending start if key is released before the debounce completes.
-- [ ] Build `AudioRecorder`:
+- [x] Build `AudioRecorder`:
   - Use `AVAudioEngine` input node + file writer (e.g., `AVAudioFile`).
-  - Record mono 16 kHz or 48 kHz PCM; document the format chosen and why.
+  - Record mono 16 kHz PCM; chosen because Whisper models natively expect 16kHz audio.
   - Start/stop methods return a temp file URL.
-  - Guard against overlapping recordings.
-- [ ] Implement `HUDWindowController`:
-  - Borderless, non‑activating `NSPanel`, level `.statusBar` or `.floating`.
-  - Bottom‑center positioning across the active screen.
-  - SwiftUI HUD view with subtle “listening” animation (pulse/breathing).
-- [ ] Wire press/release flow:
+  - Guard against overlapping recordings with `NSLock`.
+- [x] Implement `HUDWindowController`:
+  - Borderless, non‑activating `NSPanel`, level `.floating`.
+  - Bottom‑center positioning across the active screen (uses mouse location for multi-monitor).
+  - SwiftUI HUD view with subtle "listening" animation (pulse/breathing).
+- [x] Wire press/release flow:
   - Press → show HUD → start recording.
   - Release → stop recording → hide HUD.
-  - Store the audio URL for next pipeline step.
-- [ ] Preflight permissions with a user-facing UI before triggering system prompts:
+  - Store the audio URL in `AppState.lastRecordingURL` for next pipeline step.
+- [x] Preflight permissions with a user-facing UI before triggering system prompts:
   - Show a simple guidance sheet/dialog explaining why Accessibility and Microphone access are needed.
+  - Sequential flow: Microphone first (blocking), then Accessibility (blocking with polling).
   - After user acknowledges, trigger the system permission flows.
-- [ ] Add telemetry/logging around hotkey detection + recording start/stop.
+- [x] Add telemetry/logging around hotkey detection + recording start/stop.
 
 ## Design notes
-- **Hotkey reliability**: `CGEventTap` typically requires Accessibility permission.
+- **Hotkey reliability**: `CGEventTap` requires Accessibility permission.
   - On first failure, show a one‑time dialog guiding the user to System Settings.
-- **Function keys**: Support F1–F19 key codes (not the standalone `fn` modifier).
-- **HUD**: follow HIG—minimal chrome, subtle animation, no focus stealing.
+  - Uses `AXIsProcessTrustedWithOptions` with prompt option to trigger system dialog.
+- **Modifier keys**: Right Option (keyCode 61) requires `flagsChanged` event handling.
+  - Globe/Fn key cannot be used for push-to-talk (no hold support on Apple Silicon).
+- **HUD**: follows HIG—minimal chrome, subtle animation, no focus stealing.
 - **Debounce**: 100 ms delay prevents accidental starts on quick taps.
+- **App Sandbox**: Disabled (`ENABLE_APP_SANDBOX = NO`) to allow CGEventTap functionality.
 
 ## Verification plan (human)
-- On first run, if Accessibility permission is missing, app guides the user to enable it.
-- Press configured hotkey: HUD appears and stays visible while pressed.
-- Release hotkey: recording stops and HUD disappears immediately.
-- Recorded audio file exists and has expected sample rate/format.
-- Quick taps under 100 ms do not start recording.
+- [x] On first run, if Accessibility permission is missing, app guides the user to enable it.
+- [x] Press configured hotkey (Right Option): HUD appears and stays visible while pressed.
+- [x] Release hotkey: recording stops and HUD disappears immediately.
+- [x] Recorded audio file exists and has expected sample rate/format (16kHz mono, ~64KB/sec).
+- [x] Quick taps under 100 ms do not start recording.
 
 ## Agent documentation requirements
-- Document the hotkey capture approach and any limitations (e.g., `fn` key).
-- Include a short comment describing why the chosen audio format is used.
-- Add inline comments in the HUD positioning logic (multi‑screen behavior).
+- [x] Document the hotkey capture approach and any limitations (see HotkeyService.swift comments).
+- [x] Include a short comment describing why the chosen audio format is used (see AudioRecorder.swift).
+- [x] Add inline comments in the HUD positioning logic (see HUDWindowController.swift).
