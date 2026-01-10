@@ -14,18 +14,27 @@ final class AppState {
     /// Whether the model is currently loading.
     var isModelLoading: Bool = false
 
+    /// Model download progress (0.0 to 1.0), nil if not downloading.
+    /// Used by Settings UI to show download progress.
+    var modelDownloadProgress: Double?
+
     /// Error message to display, if any.
     var errorMessage: String?
 
     /// URL of the most recent audio recording, if any.
     /// Set after recording stops, used by the transcription pipeline.
     var lastRecordingURL: URL?
+
+    /// Clears any transient error state.
+    func clearError() {
+        errorMessage = nil
+    }
 }
 
 // MARK: - RecordingState
 
 /// Represents the current state of the recording pipeline.
-enum RecordingState: Equatable {
+enum RecordingState: Equatable, Sendable {
     /// No recording in progress.
     case idle
 

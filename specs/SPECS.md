@@ -24,6 +24,7 @@ For each step file (`specs/step-1.md`, `specs/step-2.md`, ...), follow this loop
 4. **Self-check (lightweight)**
    - Ensure the Deliverables for the step are satisfied.
    - Verify no extra scope slipped in.
+   - Build the app to confirm the step compiles; if it fails, fix the build errors before marking the step complete.
 
 5. **Mark the step completed**
    - Report completion in the response (e.g., “Step 1 complete”).
@@ -45,4 +46,3 @@ A step is considered complete when:
 - All TODOs in that step are implemented.
 - Agent documentation requirements are satisfied.
 - Human verification is completed and approved.
-

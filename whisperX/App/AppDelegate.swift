@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyService: HotkeyService!
     private var audioRecorder: AudioRecorder!
     private let permissionManager = PermissionManager()
+    private let modelRunner = ModelRunner()
 
     /// Window controller for permission guidance dialogs.
     private var permissionWindowController: NSWindowController?
@@ -263,6 +264,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func hideHUD() {
         hudWindowController.hideHUD()
     }
+
+    // MARK: - Transcription
+
+    /// Starts transcription of the recorded audio.
+    private func startTranscription(audioURL: URL) {
+        appState.recordingState = .transcribing
+
+        Task {
+            do {
+                let selectedModel = settings.modelVariant
+                Logger.model.info("Transcribing with model: \(selectedModel.displayName)")
+
+                appState.isModelLoading = await modelRunner.isLoading
+
+                let transcription = try await modelRunner.transcribe(
+                    audioURL: audioURL,
+                    model: selectedModel
+                )
+
+                await MainActor.run {
+                    appState.lastTranscription = transcription
+                    appState.recordingState = .idle
+                    appState.isModelLoading = false
+                    hideHUD()
+
+                    Logger.model.info("Transcription result: \(transcription.prefix(100))...")
+
+                    // Clean up temp audio file
+                    try? FileManager.default.removeItem(at: audioURL)
+                }
+
+            } catch let error as ModelRunnerError {
+                await MainActor.run {
+                    if case .transcriptionCancelled = error {
+                        // Cancelled transcriptions don't show error
+                        Logger.model.info("Transcription was cancelled")
+                    } else {
+                        appState.errorMessage = error.localizedDescription
+                        Logger.model.error("Transcription error: \(error.localizedDescription)")
+                    }
+                    appState.recordingState = .idle
+                    appState.isModelLoading = false
+                    hideHUD()
+                }
+            } catch {
+                await MainActor.run {
+                    appState.errorMessage = "Transcription failed: \(error.localizedDescription)"
+                    appState.recordingState = .idle
+                    appState.isModelLoading = false
+                    hideHUD()
+                    Logger.model.error("Unexpected transcription error: \(error)")
+                }
+            }
+        }
+    }
 }
 
 // MARK: - HotkeyServiceDelegate
@@ -271,7 +327,13 @@ extension AppDelegate: HotkeyServiceDelegate {
     func hotkeyDidPress() {
         Logger.hotkey.info("Hotkey pressed - starting recording")
 
+        // Cancel any in-progress transcription
+        Task {
+            await modelRunner.cancelCurrentTranscription()
+        }
+
         appState.recordingState = .recording
+        appState.lastTranscription = nil  // Clear previous result
         showHUD()
 
         do {
@@ -302,15 +364,15 @@ extension AppDelegate: HotkeyServiceDelegate {
             // Log file info for verification
             logRecordingInfo(url)
 
-            // For Step 2, we just store the URL. Transcription happens in Step 3.
-            appState.recordingState = .idle
+            // Start transcription pipeline
+            startTranscription(audioURL: url)
+
         } catch {
             Logger.audio.error("Failed to stop recording: \(error)")
             appState.errorMessage = "Failed to stop recording: \(error.localizedDescription)"
             appState.recordingState = .idle
+            hideHUD()
         }
-
-        hideHUD()
     }
 
     /// Logs information about the completed recording for verification.
