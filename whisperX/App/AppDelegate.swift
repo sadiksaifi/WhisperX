@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let modelRunner = ModelRunner()
     private let audioDeviceManager = AudioDeviceManager()
     private let systemAudioMuter = SystemAudioMuter()
+    private let soundFeedback = SoundFeedbackService()
 
     // MARK: - Menu Items
 
@@ -472,31 +473,40 @@ extension AppDelegate: HotkeyServiceDelegate {
             await modelRunner.cancelCurrentTranscription()
         }
 
-        // Mute system audio to prevent background audio from being recorded
-        systemAudioMuter.muteSystemAudio()
+        // Play feedback sound first, then delay slightly before muting
+        // so the sound has time to play
+        soundFeedback.playStartSound()
 
-        appState.recordingState = .recording
-        appState.lastTranscription = nil  // Clear previous result
-        showHUD()
-        updateStatusMenuItem()
+        // Small delay to let the sound play before muting system audio
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self = self else { return }
 
-        do {
-            let url = try audioRecorder.startRecording()
-            appState.lastRecordingURL = url
-            Logger.audio.info("Recording started: \(url.lastPathComponent)")
-        } catch {
-            Logger.audio.error("Failed to start recording: \(error)")
-            appState.errorMessage = "Failed to start recording: \(error.localizedDescription)"
-            appState.showErrorFeedback()
-            appState.recordingState = .idle
-            updateStatusMenuItem()
+            // Mute system audio to prevent background audio from being recorded
+            self.systemAudioMuter.muteSystemAudio()
 
-            // Restore system audio on error
-            systemAudioMuter.restoreSystemAudio()
+            self.appState.recordingState = .recording
+            self.appState.lastTranscription = nil  // Clear previous result
+            self.showHUD()
+            self.updateStatusMenuItem()
 
-            // Delay hiding HUD to show "Error" feedback
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                self?.hideHUD()
+            do {
+                let url = try self.audioRecorder.startRecording()
+                self.appState.lastRecordingURL = url
+                Logger.audio.info("Recording started: \(url.lastPathComponent)")
+            } catch {
+                Logger.audio.error("Failed to start recording: \(error)")
+                self.appState.errorMessage = "Failed to start recording: \(error.localizedDescription)"
+                self.appState.showErrorFeedback()
+                self.appState.recordingState = .idle
+                self.updateStatusMenuItem()
+
+                // Restore system audio on error
+                self.systemAudioMuter.restoreSystemAudio()
+
+                // Delay hiding HUD to show "Error" feedback
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                    self?.hideHUD()
+                }
             }
         }
     }
@@ -511,6 +521,9 @@ extension AppDelegate: HotkeyServiceDelegate {
 
         // Restore system audio now that recording is done
         systemAudioMuter.restoreSystemAudio()
+
+        // Play feedback sound after restoring audio so user hears it
+        soundFeedback.playStopSound()
 
         do {
             let url = try audioRecorder.stopRecording()

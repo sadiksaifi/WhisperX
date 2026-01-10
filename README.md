@@ -1,6 +1,6 @@
 # WhisperX
 
-> **Warning**
+> [!WARNING]
 > This project is in active development and not yet ready for general use. If you'd like to try it, you can build it manually at your own risk.
 
 **Fast, private, offline speech-to-text for Mac.**
