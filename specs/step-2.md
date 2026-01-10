@@ -15,6 +15,12 @@ Implement the core “press to talk” interaction: global hotkey detection, sta
   - Ignore key repeats; react only on initial down and corresponding up.
   - Provide delegate/closure callbacks for `onPress`/`onRelease`.
   - Handle tap failure/re‑enable logic and surface errors to logs.
+- [ ] Hardcode the invoke key to Globe/Fn for this step:
+  - Use the best-available capture approach and document any OS limitations.
+  - If Globe/Fn cannot be captured directly, fall back to a nearby function key and log a warning.
+- [ ] Add a 100 ms debounce before starting recording:
+  - Only start recording if the key is still held after the debounce interval.
+  - Cancel the pending start if key is released before the debounce completes.
 - [ ] Build `AudioRecorder`:
   - Use `AVAudioEngine` input node + file writer (e.g., `AVAudioFile`).
   - Record mono 16 kHz or 48 kHz PCM; document the format chosen and why.
@@ -28,6 +34,9 @@ Implement the core “press to talk” interaction: global hotkey detection, sta
   - Press → show HUD → start recording.
   - Release → stop recording → hide HUD.
   - Store the audio URL for next pipeline step.
+- [ ] Preflight permissions with a user-facing UI before triggering system prompts:
+  - Show a simple guidance sheet/dialog explaining why Accessibility and Microphone access are needed.
+  - After user acknowledges, trigger the system permission flows.
 - [ ] Add telemetry/logging around hotkey detection + recording start/stop.
 
 ## Design notes
@@ -35,12 +44,14 @@ Implement the core “press to talk” interaction: global hotkey detection, sta
   - On first failure, show a one‑time dialog guiding the user to System Settings.
 - **Function keys**: Support F1–F19 key codes (not the standalone `fn` modifier).
 - **HUD**: follow HIG—minimal chrome, subtle animation, no focus stealing.
+- **Debounce**: 100 ms delay prevents accidental starts on quick taps.
 
 ## Verification plan (human)
 - On first run, if Accessibility permission is missing, app guides the user to enable it.
 - Press configured hotkey: HUD appears and stays visible while pressed.
 - Release hotkey: recording stops and HUD disappears immediately.
 - Recorded audio file exists and has expected sample rate/format.
+- Quick taps under 100 ms do not start recording.
 
 ## Agent documentation requirements
 - Document the hotkey capture approach and any limitations (e.g., `fn` key).

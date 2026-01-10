@@ -10,32 +10,36 @@ Establish the AppKit + SwiftUI hybrid scaffolding, project structure, and privac
 - Privacy strings and baseline capabilities (microphone + input monitoring/accessibility guidance).
 
 ## TODOs
-- [ ] Create a clear group/folder layout (mirrors on-disk folder names):
+- [x] Create a clear group/folder layout (mirrors on-disk folder names):
   - `App/` (AppDelegate, lifecycle, app state)
   - `UI/` (SwiftUI views, HUD view, settings view)
   - `Services/` (HotkeyService, AudioRecorder, ModelRunner, ClipboardService)
   - `Models/` (settings models, enums for Wispr variants)
   - `Support/` (logging, helpers)
-- [ ] Add `NSApplicationDelegate` entry point and wire SwiftUI app lifecycle to AppKit:
+- [x] Add `NSApplicationDelegate` entry point and wire SwiftUI app lifecycle to AppKit:
   - AppDelegate creates: `NSStatusItem`, `SettingsWindowController`, `HUDWindowController`.
   - Use `NSHostingView`/`NSHostingController` to host SwiftUI.
-- [ ] Add settings storage model (UserDefaults-backed) with strongly typed keys for:
+- [x] Add settings storage model (UserDefaults-backed) with strongly typed keys for:
   - Hotkey selection (key code + modifiers)
   - Model variant
   - Audio device (input) preference
   - Copy-to-clipboard toggle
-- [ ] Add privacy usage strings in `Info.plist`:
+- [x] Add privacy usage strings in `Info.plist`:
   - `NSMicrophoneUsageDescription`
-- [ ] Document permission requirements in a README-like comment (or internal doc):
+- [x] Document permission requirements in a README-like comment (or internal doc):
   - Input Monitoring / Accessibility for global hotkey capture
   - Microphone access for recording
-- [ ] Add structured logging helper (thin wrapper around `Logger`) for consistent subsystem/category names.
+- [x] Add structured logging helper (thin wrapper around `Logger`) for consistent subsystem/category names.
 
 ## Architecture decisions (lock in now)
 - **Hybrid pattern**: AppKit for lifecycle + menu bar; SwiftUI for settings + HUD content.
 - **Windowing**:
   - Settings: `NSWindow` with `NSHostingView` (standard title bar).
   - HUD: borderless `NSPanel` anchored to bottom center, `non-activating` window level.
+- **Dock + menu bar behavior**:
+  - When only running as a menu bar app, hide the Dock icon and standard menu bar items (accessory/agent mode).
+  - When Settings opens, switch to regular app activation so the Dock icon and standard menu menus appear.
+  - When Settings closes, switch back to accessory/agent mode.
 - **Services** are `@MainActor` only when UI-facing; audio + model run in background queues/Tasks.
 - **Single source of truth**: `AppState` or `SettingsStore` as an `ObservableObject` injected into views.
 

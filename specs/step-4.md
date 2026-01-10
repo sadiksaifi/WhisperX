@@ -11,6 +11,7 @@ Expose configuration (hotkey, model, input device, clipboard behavior) and provi
 ## TODOs
 - [ ] Build Settings view in SwiftUI:
   - Section: Hotkey (custom key capture field + reset button).
+  - Include debounce setting (default 100 ms) once wired.
   - Section: Model (variant picker + short descriptor table).
   - Section: Audio (input device picker, optional level meter).
   - Section: Output (auto‑copy toggle, optional paste‑after‑transcribe toggle).
