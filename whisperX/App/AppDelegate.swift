@@ -27,6 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let systemAudioMuter = SystemAudioMuter()
     private let soundFeedback = SoundFeedbackService()
 
+    /// Pending work item for delayed HUD hide. Cancelled when new recording starts.
+    private var pendingHideWorkItem: DispatchWorkItem?
+
     // MARK: - Menu Items
 
     private var statusMenuItem: NSMenuItem!
@@ -371,6 +374,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hudWindowController.hideHUD()
     }
 
+    /// Schedules the HUD to hide after a delay. Cancels any pending hide.
+    /// - Parameter delay: Time in seconds before hiding the HUD.
+    private func scheduleHideHUD(after delay: TimeInterval) {
+        // Cancel any existing pending hide
+        pendingHideWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.hideHUD()
+        }
+        pendingHideWorkItem = workItem
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    /// Resets the HUD state for a new recording session.
+    /// Cancels pending hides and clears feedback state.
+    private func resetHUDForNewRecording() {
+        // Cancel any pending hide operation
+        pendingHideWorkItem?.cancel()
+        pendingHideWorkItem = nil
+
+        // Clear any feedback state (copied/error) immediately
+        appState.hudFeedback = .none
+    }
+
     // MARK: - Transcription
 
     /// Starts transcription of the recorded audio.
@@ -404,9 +432,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         appState.showCopiedFeedback()
 
                         // Delay hiding HUD to show "Copied" feedback
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                            self?.hideHUD()
-                        }
+                        scheduleHideHUD(after: 1.5)
 
                         // Paste after copy if enabled
                         if settings.pasteAfterCopy {
@@ -435,9 +461,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         Logger.model.error("Transcription error: \(error.localizedDescription)")
 
                         // Delay hiding HUD to show "Error" feedback
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                            self?.hideHUD()
-                        }
+                        scheduleHideHUD(after: 2.5)
                     }
                     appState.recordingState = .idle
                     appState.isModelLoading = false
@@ -453,9 +477,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     Logger.model.error("Unexpected transcription error: \(error)")
 
                     // Delay hiding HUD to show "Error" feedback
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                        self?.hideHUD()
-                    }
+                    scheduleHideHUD(after: 2.5)
                 }
             }
         }
@@ -468,26 +490,33 @@ extension AppDelegate: HotkeyServiceDelegate {
     func hotkeyDidPress() {
         Logger.hotkey.info("Hotkey pressed - starting recording")
 
+        // Immediately reset HUD state - cancel pending hides and clear feedback
+        resetHUDForNewRecording()
+
         // Cancel any in-progress transcription
         Task {
             await modelRunner.cancelCurrentTranscription()
         }
 
+        // Set recording state and show HUD immediately so user sees feedback
+        appState.recordingState = .recording
+        appState.lastTranscription = nil  // Clear previous result
+        showHUD()
+        updateStatusMenuItem()
+
         // Play feedback sound first, then delay slightly before muting
         // so the sound has time to play
         soundFeedback.playStartSound()
 
-        // Small delay to let the sound play before muting system audio
+        // Small delay to let the sound play before muting and starting recording
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self = self else { return }
 
+            // Check we're still in recording state (user might have released key)
+            guard self.appState.recordingState == .recording else { return }
+
             // Mute system audio to prevent background audio from being recorded
             self.systemAudioMuter.muteSystemAudio()
-
-            self.appState.recordingState = .recording
-            self.appState.lastTranscription = nil  // Clear previous result
-            self.showHUD()
-            self.updateStatusMenuItem()
 
             do {
                 let url = try self.audioRecorder.startRecording()
@@ -504,9 +533,7 @@ extension AppDelegate: HotkeyServiceDelegate {
                 self.systemAudioMuter.restoreSystemAudio()
 
                 // Delay hiding HUD to show "Error" feedback
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                    self?.hideHUD()
-                }
+                self.scheduleHideHUD(after: 2.5)
             }
         }
     }
@@ -516,6 +543,15 @@ extension AppDelegate: HotkeyServiceDelegate {
 
         guard appState.recordingState == .recording else {
             Logger.hotkey.debug("Not recording, ignoring release")
+            return
+        }
+
+        // Check if recording actually started (user might have released during the 150ms delay)
+        guard audioRecorder.isRecording else {
+            Logger.hotkey.debug("Recording not yet started, cancelling")
+            appState.recordingState = .idle
+            updateStatusMenuItem()
+            hideHUD()
             return
         }
 
@@ -544,9 +580,7 @@ extension AppDelegate: HotkeyServiceDelegate {
             updateStatusMenuItem()
 
             // Delay hiding HUD to show "Error" feedback
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                self?.hideHUD()
-            }
+            scheduleHideHUD(after: 2.5)
         }
     }
 
