@@ -1,0 +1,37 @@
+name: Help wanted
+description: Need help with WhisperX
+title: "[Help] "
+labels: ["help wanted"]
+assignees: []
+body:
+  - type: textarea
+    id: need-help
+    attributes:
+      label: What do you need help with?
+      description: A clear description of what you're trying to do and what's not working.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: |
+        Describe the steps you've taken to solve this problem. Did you try:
+        - Clean build (`xcodebuild clean build -scheme whisperX`)
+        - Checking Console.app for logs
+        - Verifying permissions (Accessibility, Microphone)
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS Version
+      placeholder: e.g. macOS 15.2 Sequoia
+  - type: input
+    id: mac-model
+    attributes:
+      label: Mac Model
+      placeholder: e.g. MacBook Pro M3, Mac Mini M2
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here.
