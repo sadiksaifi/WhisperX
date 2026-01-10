@@ -419,30 +419,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
 
                 await MainActor.run {
-                    appState.lastTranscription = transcription
                     appState.recordingState = .idle
                     appState.isModelLoading = false
                     updateStatusMenuItem()
 
                     Logger.model.info("Transcription result: \(transcription.prefix(100))...")
 
-                    // Auto-copy to clipboard if enabled
-                    if settings.copyToClipboard {
-                        ClipboardService.shared.copy(transcription)
-                        appState.showCopiedFeedback()
+                    // Check if transcription has meaningful content (not blank audio)
+                    let isBlankAudio = transcription.isEmpty
+                        || transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || transcription.contains("[BLANK_AUDIO]")
 
-                        // Delay hiding HUD to show "Copied" feedback
-                        scheduleHideHUD(after: 1.5)
-
-                        // Paste after copy if enabled
-                        if settings.pasteAfterCopy {
-                            // Small delay to ensure clipboard is ready
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                ClipboardService.shared.paste()
-                            }
-                        }
-                    } else {
+                    if isBlankAudio {
+                        Logger.model.info("Blank audio detected, skipping copy/paste")
                         hideHUD()
+                    } else {
+                        appState.lastTranscription = transcription
+
+                        // Auto-copy to clipboard if enabled
+                        if settings.copyToClipboard {
+                            ClipboardService.shared.copy(transcription)
+                            appState.showCopiedFeedback()
+
+                            // Delay hiding HUD to show "Copied" feedback
+                            scheduleHideHUD(after: 1.5)
+
+                            // Paste after copy if enabled
+                            if settings.pasteAfterCopy {
+                                // Small delay to ensure clipboard is ready
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    ClipboardService.shared.paste()
+                                }
+                            }
+                        } else {
+                            hideHUD()
+                        }
                     }
 
                     // Clean up temp audio file
