@@ -13,9 +13,26 @@ xcodebuild build -scheme whisperX -configuration Release
 
 # Open in Xcode (Cmd+B to build, Cmd+R to run)
 open whisperX.xcodeproj
+
+# Run Tests
+xcodebuild test -scheme whisperX -destination 'platform=macOS'
 ```
 
-No test or lint infrastructure is currently configured.
+## Test Infrastructure
+
+Unit tests are located in the `whisperXTests/` directory. The test suite covers:
+
+- **WhisperModelTests** - Model enum properties, ratings, codable conformance
+- **SettingsStoreTests** - UserDefaults persistence, default values
+- **InstallationStateTests** - Installation location detection, state properties
+- **UpdateStateTests** - SemanticVersion parsing/comparison, UpdateCheckState, error handling
+- **AudioRecorderTests** - Error descriptions, configuration constants
+- **ModelRunnerTests** - Error descriptions, recovery suggestions
+- **PermissionManagerTests** - Permission status enums, guidance flag tracking
+- **AudioDeviceTests** - Device struct properties, identifiable/equatable conformance
+- **ClipboardServiceTests** - Copy operations (paste requires system access)
+- **HotkeyServiceTests** - Configuration, initialization, delegate handling
+- **UpdateServiceTests** - State management, version comparison, asset selection
 
 ## Architecture Overview
 
