@@ -1,5 +1,8 @@
 # WhisperX
 
+> [!CAUTION]
+> **Early Development:** This project is under active development and not yet recommended for daily use. Expect bugs, breaking changes, and incomplete features. Binaries are provided for testing purposes only — use at your own risk.
+
 **Fast, private, offline speech-to-text for Mac.**
 
 Turn your voice into text instantly with a single hotkey. WhisperX runs entirely on your Mac using OpenAI's Whisper model — no internet required, no data leaves your device.
@@ -11,6 +14,12 @@ Turn your voice into text instantly with a single hotkey. WhisperX runs entirely
 - **Dead Simple** — Hold a key, speak, release. Text appears in your clipboard.
 - **Works Everywhere** — Paste your transcription into any app instantly.
 
+## How It Works
+
+1. Press and hold your hotkey (default: `Option + Space`)
+2. Speak
+3. Release — your text is ready to paste
+
 ## Features
 
 - Push-to-talk with customizable global hotkey
@@ -20,21 +29,6 @@ Turn your voice into text instantly with a single hotkey. WhisperX runs entirely
 - Choose your preferred microphone
 - Visual feedback while recording
 
-## Models
-
-Choose the right balance of speed and accuracy for your needs:
-
-| Model | Size | Speed | Accuracy |
-|-------|------|-------|----------|
-| tiny | 39 MB | Fastest | Basic |
-| base | 74 MB | Fast | Good |
-| small | 244 MB | Moderate | Better |
-| medium | 769 MB | Slow | High |
-| large-v3 | 1.5 GB | Slowest | Highest |
-| large-v3-turbo | 809 MB | Fast | High |
-
-Models are downloaded automatically on first use.
-
 ## Requirements
 
 - macOS 15.0+
@@ -42,50 +36,54 @@ Models are downloaded automatically on first use.
 
 ## Installation
 
-### Download
-
 1. Go to [Releases](https://github.com/sadiksaifi/WhisperX/releases)
 2. Download `WhisperX-vX.X.X.dmg` from the latest release
 3. Open the DMG and drag WhisperX to your Applications folder
 
-### First Launch (Important)
+> [!IMPORTANT]
+> **First Launch:** Since WhisperX is distributed without code signing, macOS will block it by default.
+>
+> **Option 1:** Right-click WhisperX.app → Select "Open" → Click "Open" in the dialog
+>
+> **Option 2:** Run in Terminal after installing:
+> ```bash
+> xattr -cr /Applications/WhisperX.app
+> ```
 
-Since WhisperX is distributed without code signing, macOS will block it by default. To run the app:
+> [!NOTE]
+> This is safe — you're downloading directly from the official GitHub repository. The app runs entirely locally and doesn't connect to any external servers.
 
-**Option 1: Right-click to open**
-1. Right-click (or Control-click) on WhisperX.app
-2. Select "Open" from the menu
-3. Click "Open" in the dialog that appears
+## Permissions
 
-**Option 2: Terminal command**
+WhisperX needs two system permissions:
 
-Run this command after moving WhisperX to Applications:
+- **Microphone** — To capture your voice
+- **Accessibility** — To detect the global hotkey
 
-```bash
-xattr -cr /Applications/WhisperX.app
-```
+Grant these when prompted, or enable manually in System Settings → Privacy & Security.
 
-This removes the quarantine attribute that macOS applies to downloaded apps.
+## Models
 
-> **Note:** This is safe because you're downloading directly from the official GitHub repository. The app runs entirely locally and doesn't connect to any external servers.
+Choose the right balance of speed and accuracy:
+
+| Model | Size | Speed | Accuracy |
+|-------|------|-------|----------|
+| tiny | 39 MB | Fastest | Basic |
+| base | 74 MB | Fast | Good |
+| small | 244 MB | Moderate | Better |
+| large-v3-turbo | 809 MB | Fast | High |
+| large-v3 | 1.5 GB | Slowest | Highest |
+
+Models are downloaded automatically on first use.
 
 ## Building from Source
 
-Requirements:
-- macOS 15.0+
-- Xcode 16.2+
-- Apple Silicon (M1/M2/M3/M4)
+Requirements: macOS 15.0+, Xcode 16.2+, Apple Silicon
 
 ```bash
-# Clone the repository
 git clone https://github.com/sadiksaifi/WhisperX.git
 cd WhisperX
-
-# Build and run
 make run
-
-# Or open in Xcode (Cmd+R to run)
-make xcode
 ```
 
 ### Make Commands
@@ -100,28 +98,10 @@ make xcode
 | `make clean` | Remove build artifacts |
 | `make help` | Show all commands |
 
-For DMG creation, first install the required tools:
-```bash
-make install-tools  # Installs create-dmg and imagemagick
-make dmg            # Creates WhisperX.dmg
-```
+> [!TIP]
+> For DMG creation: `make install-tools && make dmg`
 
 See [docs/development.md](docs/development.md) for detailed documentation.
-
-## How It Works
-
-1. Press and hold your hotkey (default: `Option + Space`)
-2. Speak
-3. Release — your text is ready to paste
-
-## Permissions
-
-WhisperX needs two system permissions:
-
-- **Microphone** — To capture your voice
-- **Accessibility** — To detect the global hotkey
-
-Grant these when prompted, or enable manually in `System Settings → Privacy & Security`.
 
 ## License
 
