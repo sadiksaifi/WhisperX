@@ -72,24 +72,41 @@ This removes the quarantine attribute that macOS applies to downloaded apps.
 ## Building from Source
 
 Requirements:
+- macOS 15.0+
 - Xcode 16.2+
+- Apple Silicon (M1/M2/M3/M4)
 
 ```bash
 # Clone the repository
 git clone https://github.com/sadiksaifi/WhisperX.git
 cd WhisperX
 
-# Open in Xcode
-open whisperX.xcodeproj
+# Build and run
+make run
 
-# Build and run (Cmd+R)
+# Or open in Xcode (Cmd+R to run)
+make xcode
 ```
 
-Or build from command line:
+### Make Commands
 
+| Command | Description |
+|---------|-------------|
+| `make build` | Build debug configuration |
+| `make build-release` | Build release configuration |
+| `make run` | Build and launch the app |
+| `make xcode` | Open in Xcode |
+| `make dmg` | Create DMG installer |
+| `make clean` | Remove build artifacts |
+| `make help` | Show all commands |
+
+For DMG creation, first install the required tools:
 ```bash
-xcodebuild build -scheme whisperX -configuration Release
+make install-tools  # Installs create-dmg and imagemagick
+make dmg            # Creates WhisperX.dmg
 ```
+
+See [docs/development.md](docs/development.md) for detailed documentation.
 
 ## How It Works
 
