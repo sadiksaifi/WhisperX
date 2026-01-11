@@ -44,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Window controller for permission guidance dialogs.
     private var permissionWindowController: NSWindowController?
 
+    /// Window controller for installation wizard.
+    private var installationWindowController: InstallationWizardWindowController?
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -56,9 +59,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Start in accessory mode (no dock icon)
         NSApp.setActivationPolicy(.accessory)
 
-        // Check and request permissions
+        // Check installation location, then permissions
         Task {
-            await checkPermissions()
+            await checkInstallationAndPermissions()
         }
 
         // Check for updates on launch if enabled
@@ -193,6 +196,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hudWindowController = HUDWindowController(appState: appState)
 
         Logger.app.debug("Window controllers initialized")
+    }
+
+    // MARK: - Installation & Permissions
+
+    /// Main startup flow: check installation location, then permissions.
+    private func checkInstallationAndPermissions() async {
+        // Step 0: Check if app needs to be moved to Applications
+        if InstallationService.needsInstallation() && !settings.installationWizardDismissed {
+            let result = await showInstallationWizard()
+
+            switch result {
+            case .moved:
+                // App will relaunch from new location
+                return
+            case .later:
+                settings.installationWizardDismissed = true
+                // Continue with normal launch
+            case .runFromCurrent:
+                // Continue with normal launch
+                break
+            }
+        }
+
+        // Continue with permission checks
+        await checkPermissions()
+    }
+
+    /// Shows the installation wizard.
+    private func showInstallationWizard() async -> InstallationResult {
+        installationWindowController = InstallationWizardWindowController()
+        let result = await installationWindowController!.showWizard()
+        installationWindowController = nil
+        return result
     }
 
     // MARK: - Permissions

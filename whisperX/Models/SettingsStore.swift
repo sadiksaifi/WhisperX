@@ -18,6 +18,7 @@ final class SettingsStore {
         static let pasteAfterCopy = "pasteAfterCopy"
         static let checkUpdatesOnLaunch = "checkUpdatesOnLaunch"
         static let autoUpdateEnabled = "autoUpdateEnabled"
+        static let installationWizardDismissed = "installationWizardDismissed"
     }
 
     // MARK: - Defaults
@@ -76,6 +77,12 @@ final class SettingsStore {
         didSet { defaults.set(autoUpdateEnabled, forKey: Keys.autoUpdateEnabled) }
     }
 
+    /// Whether the user has dismissed the installation wizard.
+    /// Set to true when user clicks "Later" or closes the wizard.
+    var installationWizardDismissed: Bool {
+        didSet { defaults.set(installationWizardDismissed, forKey: Keys.installationWizardDismissed) }
+    }
+
     // MARK: - Private
 
     private let defaults: UserDefaults
@@ -106,5 +113,6 @@ final class SettingsStore {
         self.pasteAfterCopy = defaults.object(forKey: Keys.pasteAfterCopy) as? Bool ?? false
         self.checkUpdatesOnLaunch = defaults.object(forKey: Keys.checkUpdatesOnLaunch) as? Bool ?? true
         self.autoUpdateEnabled = defaults.object(forKey: Keys.autoUpdateEnabled) as? Bool ?? false
+        self.installationWizardDismissed = defaults.bool(forKey: Keys.installationWizardDismissed)
     }
 }
