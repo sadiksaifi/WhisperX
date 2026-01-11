@@ -31,14 +31,25 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Install create-dmg
+        run: brew install create-dmg
+
       - name: Create DMG
         run: |
           APP_PATH="build/Build/Products/Release/WhisperX.app"
 
-          hdiutil create -volname "WhisperX" \
-            -srcfolder "$APP_PATH" \
-            -ov -format UDZO \
-            "WhisperX-${{ github.ref_name }}.dmg"
+          create-dmg \
+            --volname "WhisperX" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "WhisperX.app" 150 185 \
+            --hide-extension "WhisperX.app" \
+            --app-drop-link 450 185 \
+            --skip-jenkins \
+            --no-internet-enable \
+            "WhisperX-${{ github.ref_name }}.dmg" \
+            "$APP_PATH"
 
       - name: Generate Release Notes
         run: |
