@@ -21,6 +21,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Install DMG tools
+        run: brew install create-dmg imagemagick
+
       - name: Build Release
         run: |
           xcodebuild build \
@@ -31,13 +34,13 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Generate DMG background
+        run: ./installer/generate-background.sh
+
       - name: Create DMG
         run: |
-          APP_PATH="build/Build/Products/Release/WhisperX.app"
-
-          hdiutil create -volname "WhisperX" \
-            -srcfolder "$APP_PATH" \
-            -ov -format UDZO \
+          ./installer/create-dmg.sh \
+            "build/Build/Products/Release/WhisperX.app" \
             "WhisperX-${{ github.ref_name }}.dmg"
 
       - name: Generate Release Notes
