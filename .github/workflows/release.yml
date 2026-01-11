@@ -40,13 +40,13 @@ jobs:
 
           create-dmg \
             --volname "WhisperX" \
+            --background "scripts/dmg-resources/background.png" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon-size 100 \
             --icon "WhisperX.app" 150 185 \
             --hide-extension "WhisperX.app" \
             --app-drop-link 450 185 \
-            --skip-jenkins \
             --no-internet-enable \
             "WhisperX-${{ github.ref_name }}.dmg" \
             "$APP_PATH"
