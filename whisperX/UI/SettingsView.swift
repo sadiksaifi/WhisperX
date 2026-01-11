@@ -10,6 +10,12 @@ struct SettingsView: View {
     @Bindable var permissionManager: PermissionManager
     @Bindable var audioDeviceManager: AudioDeviceManager
 
+    // Update state and callbacks
+    var updateState: UpdateCheckState = .idle
+    var onCheckForUpdates: () -> Void = {}
+    var onDownloadUpdate: () -> Void = {}
+    var onInstallUpdate: () -> Void = {}
+
     var body: some View {
         Form {
             errorSection
@@ -17,10 +23,11 @@ struct SettingsView: View {
             modelSection
             audioSection
             outputSection
+            updatesSection
             permissionsSection
         }
         .formStyle(.grouped)
-        .frame(width: 450, height: 520)
+        .frame(width: 450, height: 620)
         .onAppear {
             audioDeviceManager.startMonitoring()
         }
@@ -135,6 +142,20 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Updates Section
+
+    /// Configure update preferences and check for updates.
+    private var updatesSection: some View {
+        UpdateSectionView(
+            settings: settings,
+            updateState: updateState,
+            currentVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown",
+            onCheckForUpdates: onCheckForUpdates,
+            onDownloadUpdate: onDownloadUpdate,
+            onInstallUpdate: onInstallUpdate
+        )
+    }
+
     // MARK: - Permissions Section
 
     /// Display permission status with fix actions.
@@ -209,6 +230,10 @@ private struct PermissionRow: View {
         settings: SettingsStore(),
         appState: AppState(),
         permissionManager: PermissionManager(),
-        audioDeviceManager: AudioDeviceManager()
+        audioDeviceManager: AudioDeviceManager(),
+        updateState: .idle,
+        onCheckForUpdates: {},
+        onDownloadUpdate: {},
+        onInstallUpdate: {}
     )
 }

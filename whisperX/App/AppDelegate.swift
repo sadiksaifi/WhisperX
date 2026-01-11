@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import os
+import UserNotifications
 
 /// Main application delegate managing the menu bar, windows, and app lifecycle.
 ///
@@ -26,6 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let audioDeviceManager = AudioDeviceManager()
     private let systemAudioMuter = SystemAudioMuter()
     private let soundFeedback = SoundFeedbackService()
+    private var updateService: UpdateService!
+
+    /// Current update state for UI.
+    private var updateState: UpdateCheckState = .idle
 
     /// Pending work item for delayed HUD hide. Cancelled when new recording starts.
     private var pendingHideWorkItem: DispatchWorkItem?
@@ -55,6 +60,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await checkPermissions()
         }
+
+        // Check for updates on launch if enabled
+        if settings.checkUpdatesOnLaunch {
+            Task {
+                try? await updateService.checkForUpdates()
+            }
+        }
+
+        // Request notification permission for update alerts
+        requestNotificationPermission()
+    }
+
+    /// Requests permission to show notifications for update alerts.
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error = error {
+                Logger.update.error("Failed to request notification permission: \(error)")
+            } else {
+                Logger.update.debug("Notification permission granted: \(granted)")
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -81,6 +107,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             modifiers: settings.hotkeyModifiers,
             debounceInterval: TimeInterval(settings.hotkeyDebounceMs) / 1000.0
         )
+
+        // Initialize update service
+        updateService = UpdateService(delegate: nil)
+        Task {
+            await updateService.setDelegate(self)
+        }
 
         Logger.app.debug("Services initialized")
     }
@@ -145,6 +177,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         settingsWindowController.onVisibilityChanged = { [weak self] visible in
             self?.handleSettingsVisibilityChanged(visible)
+        }
+
+        // Wire up update callbacks
+        settingsWindowController.onCheckForUpdates = { [weak self] in
+            self?.checkForUpdates()
+        }
+        settingsWindowController.onDownloadUpdate = { [weak self] in
+            self?.downloadUpdate()
+        }
+        settingsWindowController.onInstallUpdate = { [weak self] in
+            self?.installUpdate()
         }
 
         hudWindowController = HUDWindowController(appState: appState)
@@ -399,6 +442,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.hudFeedback = .none
     }
 
+    // MARK: - Update Actions
+
+    /// Checks for updates from GitHub.
+    private func checkForUpdates() {
+        Task {
+            do {
+                try await updateService.checkForUpdates(force: true)
+            } catch {
+                Logger.update.error("Update check failed: \(error)")
+            }
+        }
+    }
+
+    /// Downloads the available update.
+    private func downloadUpdate() {
+        Task {
+            do {
+                try await updateService.downloadUpdate()
+            } catch {
+                Logger.update.error("Update download failed: \(error)")
+            }
+        }
+    }
+
+    /// Installs the downloaded update.
+    private func installUpdate() {
+        Task {
+            do {
+                try await updateService.installUpdate()
+            } catch {
+                Logger.update.error("Update installation failed: \(error)")
+            }
+        }
+    }
+
+    /// Shows a notification that an update is available.
+    private func showUpdateNotification(release: GitHubRelease) {
+        let content = UNMutableNotificationContent()
+        content.title = "WhisperX Update Available"
+        content.body = "Version \(release.tagName) is now available. Open Settings to update."
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "update-available",
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                Logger.update.error("Failed to show update notification: \(error)")
+            }
+        }
+    }
+
     // MARK: - Transcription
 
     /// Starts transcription of the recorded audio.
@@ -607,5 +705,38 @@ extension AppDelegate: HotkeyServiceDelegate {
         } catch {
             Logger.audio.debug("Could not read recording attributes: \(error)")
         }
+    }
+}
+
+// MARK: - UpdateServiceDelegate
+
+extension AppDelegate: UpdateServiceDelegate {
+    func updateService(_ service: UpdateService, didChangeState state: UpdateCheckState) {
+        updateState = state
+        settingsWindowController.updateUpdateState(state)
+        Logger.update.debug("Update state changed: \(String(describing: state))")
+    }
+
+    func updateService(_ service: UpdateService, didFindUpdate release: GitHubRelease) {
+        Logger.update.info("Update available: \(release.tagName)")
+
+        if settings.autoUpdateEnabled {
+            // Auto-download and install
+            Task {
+                do {
+                    try await updateService.downloadUpdate()
+                    try await updateService.installUpdate()
+                } catch {
+                    Logger.update.error("Auto-update failed: \(error)")
+                }
+            }
+        } else {
+            // Show notification to user
+            showUpdateNotification(release: release)
+        }
+    }
+
+    func updateServiceDidCompleteInstallation(_ service: UpdateService) {
+        Logger.update.info("Update installation complete - app will restart")
     }
 }

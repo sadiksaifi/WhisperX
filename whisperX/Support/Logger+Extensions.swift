@@ -24,4 +24,7 @@ extension Logger {
 
     /// UI and window management.
     nonisolated static let ui = Logger(subsystem: subsystem, category: "ui")
+
+    /// Update checking and installation.
+    nonisolated static let update = Logger(subsystem: subsystem, category: "update")
 }

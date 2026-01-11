@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-01-11
+
 ### Added
+- Auto-update mechanism with GitHub releases integration
+- Check for updates on launch (configurable in Settings)
+- Manual update check button in Settings
+- Auto-update option for silent background updates
 - Auto-mute system audio during recording to prevent background audio contamination
 - Audio feedback sounds (Tink/Purr) for recording start/stop
 - Blank audio detection - skip copy/paste when no speech detected
@@ -18,8 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - App display name corrected to "WhisperX" in Dock and menu bar
+- Initial public release (previously 1.0.0 was internal only)
 
-## [1.0.0] - 2024-01-10
+## [1.0.0] - 2024-01-10 [Internal]
 
 ### Added
 - Initial release

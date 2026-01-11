@@ -14,6 +14,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let permissionManager: PermissionManager
     private let audioDeviceManager: AudioDeviceManager
 
+    // Update callbacks
+    var updateState: UpdateCheckState = .idle
+    var onCheckForUpdates: () -> Void = {}
+    var onDownloadUpdate: () -> Void = {}
+    var onInstallUpdate: () -> Void = {}
+
+    // Keep reference to hosting view for updates
+    private var hostingView: NSHostingView<SettingsView>?
+
     init(
         settings: SettingsStore,
         appState: AppState,
@@ -26,7 +35,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         self.audioDeviceManager = audioDeviceManager
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 450, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 620),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: true
@@ -39,13 +48,35 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         window.delegate = self
 
-        let hostingView = NSHostingView(rootView: SettingsView(
+        updateHostingView()
+    }
+
+    /// Updates the hosting view with current state.
+    func updateHostingView() {
+        let settingsView = SettingsView(
             settings: settings,
             appState: appState,
             permissionManager: permissionManager,
-            audioDeviceManager: audioDeviceManager
-        ))
-        window.contentView = hostingView
+            audioDeviceManager: audioDeviceManager,
+            updateState: updateState,
+            onCheckForUpdates: { [weak self] in self?.onCheckForUpdates() },
+            onDownloadUpdate: { [weak self] in self?.onDownloadUpdate() },
+            onInstallUpdate: { [weak self] in self?.onInstallUpdate() }
+        )
+
+        if let existingHostingView = hostingView {
+            existingHostingView.rootView = settingsView
+        } else {
+            let newHostingView = NSHostingView(rootView: settingsView)
+            hostingView = newHostingView
+            window?.contentView = newHostingView
+        }
+    }
+
+    /// Updates the displayed update state.
+    func updateUpdateState(_ state: UpdateCheckState) {
+        updateState = state
+        updateHostingView()
     }
 
     @available(*, unavailable)

@@ -1,8 +1,5 @@
 # WhisperX
 
-> [!WARNING]
-> This project is in active development and not yet ready for general use. If you'd like to try it, you can build it manually at your own risk.
-
 **Fast, private, offline speech-to-text for Mac.**
 
 Turn your voice into text instantly with a single hotkey. WhisperX runs entirely on your Mac using OpenAI's Whisper model — no internet required, no data leaves your device.
@@ -42,14 +39,45 @@ Models are downloaded automatically on first use.
 
 - macOS 15.0+
 - Apple Silicon (M1/M2/M3/M4)
-- Xcode 16.2+ (for building)
 
-## Getting Started
+## Installation
+
+### Download
+
+1. Go to [Releases](https://github.com/sadiksaifi/WhisperX/releases)
+2. Download `WhisperX-vX.X.X.dmg` from the latest release
+3. Open the DMG and drag WhisperX to your Applications folder
+
+### First Launch (Important)
+
+Since WhisperX is distributed without code signing, macOS will block it by default. To run the app:
+
+**Option 1: Right-click to open**
+1. Right-click (or Control-click) on WhisperX.app
+2. Select "Open" from the menu
+3. Click "Open" in the dialog that appears
+
+**Option 2: Terminal command**
+
+Run this command after moving WhisperX to Applications:
+
+```bash
+xattr -cr /Applications/WhisperX.app
+```
+
+This removes the quarantine attribute that macOS applies to downloaded apps.
+
+> **Note:** This is safe because you're downloading directly from the official GitHub repository. The app runs entirely locally and doesn't connect to any external servers.
+
+## Building from Source
+
+Requirements:
+- Xcode 16.2+
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/whisperX.git
-cd whisperX
+git clone https://github.com/sadiksaifi/WhisperX.git
+cd WhisperX
 
 # Open in Xcode
 open whisperX.xcodeproj

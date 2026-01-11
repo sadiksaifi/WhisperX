@@ -16,6 +16,8 @@ final class SettingsStore {
         static let audioDeviceID = "audioDeviceID"
         static let copyToClipboard = "copyToClipboard"
         static let pasteAfterCopy = "pasteAfterCopy"
+        static let checkUpdatesOnLaunch = "checkUpdatesOnLaunch"
+        static let autoUpdateEnabled = "autoUpdateEnabled"
     }
 
     // MARK: - Defaults
@@ -64,6 +66,16 @@ final class SettingsStore {
         didSet { defaults.set(pasteAfterCopy, forKey: Keys.pasteAfterCopy) }
     }
 
+    /// Whether to check for updates when the app launches.
+    var checkUpdatesOnLaunch: Bool {
+        didSet { defaults.set(checkUpdatesOnLaunch, forKey: Keys.checkUpdatesOnLaunch) }
+    }
+
+    /// Whether to automatically download and install updates without confirmation.
+    var autoUpdateEnabled: Bool {
+        didSet { defaults.set(autoUpdateEnabled, forKey: Keys.autoUpdateEnabled) }
+    }
+
     // MARK: - Private
 
     private let defaults: UserDefaults
@@ -92,5 +104,7 @@ final class SettingsStore {
         self.audioDeviceID = defaults.string(forKey: Keys.audioDeviceID)
         self.copyToClipboard = defaults.object(forKey: Keys.copyToClipboard) as? Bool ?? true
         self.pasteAfterCopy = defaults.object(forKey: Keys.pasteAfterCopy) as? Bool ?? false
+        self.checkUpdatesOnLaunch = defaults.object(forKey: Keys.checkUpdatesOnLaunch) as? Bool ?? true
+        self.autoUpdateEnabled = defaults.object(forKey: Keys.autoUpdateEnabled) as? Bool ?? false
     }
 }
