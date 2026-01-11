@@ -23,10 +23,15 @@ jobs:
 
       - name: Build Release
         run: |
+          # Strip 'v' prefix from tag to get version (e.g., v0.1.0-alpha.1 -> 0.1.0-alpha.1)
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+
           xcodebuild build \
             -scheme whisperX \
             -configuration Release \
             -derivedDataPath build \
+            MARKETING_VERSION="${VERSION}" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO

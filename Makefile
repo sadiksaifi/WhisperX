@@ -34,11 +34,12 @@ build: build-debug
 
 ## build-debug: Build the app in Debug configuration
 build-debug:
-	@echo "Building $(APP_NAME) (Debug)..."
+	@echo "Building $(APP_NAME) (Debug) - Version: $(VERSION)..."
 	@xcodebuild build \
 		-scheme $(SCHEME) \
 		-configuration Debug \
 		-derivedDataPath $(DERIVED_DATA) \
+		MARKETING_VERSION=$(VERSION) \
 		CODE_SIGN_IDENTITY="" \
 		CODE_SIGNING_REQUIRED=NO \
 		CODE_SIGNING_ALLOWED=NO \
@@ -47,11 +48,12 @@ build-debug:
 
 ## build-release: Build the app in Release configuration
 build-release:
-	@echo "Building $(APP_NAME) (Release)..."
+	@echo "Building $(APP_NAME) (Release) - Version: $(VERSION)..."
 	@xcodebuild build \
 		-scheme $(SCHEME) \
 		-configuration Release \
 		-derivedDataPath $(DERIVED_DATA) \
+		MARKETING_VERSION=$(VERSION) \
 		CODE_SIGN_IDENTITY="" \
 		CODE_SIGNING_REQUIRED=NO \
 		CODE_SIGNING_ALLOWED=NO \
