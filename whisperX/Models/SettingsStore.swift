@@ -117,7 +117,7 @@ final class SettingsStore {
 
         self.audioDeviceID = defaults.string(forKey: Keys.audioDeviceID)
         self.copyToClipboard = defaults.object(forKey: Keys.copyToClipboard) as? Bool ?? true
-        self.pasteAfterCopy = defaults.object(forKey: Keys.pasteAfterCopy) as? Bool ?? false
+        self.pasteAfterCopy = defaults.object(forKey: Keys.pasteAfterCopy) as? Bool ?? true
         self.checkUpdatesOnLaunch = defaults.object(forKey: Keys.checkUpdatesOnLaunch) as? Bool ?? true
         self.autoUpdateEnabled = defaults.object(forKey: Keys.autoUpdateEnabled) as? Bool ?? false
 
