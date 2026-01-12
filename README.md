@@ -1,78 +1,146 @@
 # WhisperX
 
+[![GitHub release](https://img.shields.io/github/v/release/sadiksaifi/WhisperX?include_prereleases&label=version)](https://github.com/sadiksaifi/WhisperX/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-15.0%2B-blue)](https://github.com/sadiksaifi/WhisperX)
+[![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2FM2%2FM3%2FM4-orange)](https://github.com/sadiksaifi/WhisperX)
+
 **Fast, private, offline speech-to-text for Mac.**
 
 Turn your voice into text instantly with a single hotkey. WhisperX runs entirely on your Mac using OpenAI's Whisper model — no internet required, no data leaves your device.
 
+> [!TIP]
+> **Quick Start:** [Download the latest release](https://github.com/sadiksaifi/WhisperX/releases) → Open DMG → Drag to Applications → Done!
+
+---
+
+## Table of Contents
+
+- [Why WhisperX?](#why-whisperx)
+- [How It Works](#how-it-works)
+- [Installation](#installation)
+  - [Download](#download)
+  - [First Launch](#first-launch)
+  - [Permissions](#permissions)
+- [Features](#features)
+- [Models](#models)
+- [Building from Source](#building-from-source)
+- [License](#license)
+
+---
+
 ## Why WhisperX?
 
-- **Completely Private** — Your audio never leaves your Mac. No cloud, no servers, no subscriptions.
-- **Blazing Fast** — Optimized for Apple Silicon. Transcribe in seconds, not minutes.
-- **Dead Simple** — Hold a key, speak, release. Text appears in your clipboard.
-- **Works Everywhere** — Paste your transcription into any app instantly.
+| | |
+|---|---|
+| **Completely Private** | Your audio never leaves your Mac. No cloud, no servers, no subscriptions. |
+| **Blazing Fast** | Optimized for Apple Silicon. Transcribe in seconds, not minutes. |
+| **Dead Simple** | Hold a key, speak, release. Text appears in your clipboard. |
+| **Works Everywhere** | Paste your transcription into any app instantly. |
 
-## Features
+---
 
-- Push-to-talk with customizable global hotkey
-- Multiple Whisper model options (tiny to large-v3-turbo)
-- Auto-copy to clipboard
-- Auto-paste after transcription
-- Choose your preferred microphone
-- Visual feedback while recording
+## How It Works
 
-## Models
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. HOLD          2. SPEAK          3. RELEASE              │
+│  ─────────────────────────────────────────────────────      │
+│  ⌥ + Space        🎤 "Hello..."     📋 Text copied!         │
+│  (hold hotkey)    (speak clearly)   (paste anywhere)        │
+└─────────────────────────────────────────────────────────────┘
+```
 
-Choose the right balance of speed and accuracy for your needs:
-
-| Model | Size | Speed | Accuracy |
-|-------|------|-------|----------|
-| tiny | 39 MB | Fastest | Basic |
-| base | 74 MB | Fast | Good |
-| small | 244 MB | Moderate | Better |
-| medium | 769 MB | Slow | High |
-| large-v3 | 1.5 GB | Slowest | Highest |
-| large-v3-turbo | 809 MB | Fast | High |
-
-Models are downloaded automatically on first use.
-
-## Requirements
-
-- macOS 15.0+
-- Apple Silicon (M1/M2/M3/M4)
+---
 
 ## Installation
 
+### System Requirements
+
+| Requirement | Minimum |
+|-------------|---------|
+| **macOS** | 15.0 (Sequoia) or later |
+| **Processor** | Apple Silicon (M1/M2/M3/M4) |
+
 ### Download
 
-1. Go to [Releases](https://github.com/sadiksaifi/WhisperX/releases)
+1. Go to [**Releases**](https://github.com/sadiksaifi/WhisperX/releases)
 2. Download `WhisperX-vX.X.X.dmg` from the latest release
 3. Open the DMG and drag WhisperX to your Applications folder
 
-### First Launch (Important)
+### First Launch
 
-Since WhisperX is distributed without code signing, macOS will block it by default. To run the app:
+> [!IMPORTANT]
+> **Gatekeeper Warning:** Since WhisperX is distributed without code signing, macOS will block it by default.
 
-**Option 1: Right-click to open**
+**Option 1: Right-click to open (Recommended)**
+
 1. Right-click (or Control-click) on WhisperX.app
 2. Select "Open" from the menu
 3. Click "Open" in the dialog that appears
 
-**Option 2: Terminal command**
+> [!WARNING]
+> **Option 2: Terminal command**
+>
+> Run this command after moving WhisperX to Applications:
+> ```bash
+> xattr -cr /Applications/WhisperX.app
+> ```
+> This removes the quarantine attribute that macOS applies to downloaded apps.
 
-Run this command after moving WhisperX to Applications:
+> [!NOTE]
+> **Why is this safe?** You're downloading directly from the official GitHub repository. The app runs entirely locally and doesn't connect to any external servers.
 
-```bash
-xattr -cr /Applications/WhisperX.app
-```
+### Permissions
 
-This removes the quarantine attribute that macOS applies to downloaded apps.
+> [!WARNING]
+> WhisperX requires two system permissions to function. Without these, the app cannot record audio or detect your hotkey.
 
-> **Note:** This is safe because you're downloading directly from the official GitHub repository. The app runs entirely locally and doesn't connect to any external servers.
+| Permission | Purpose | How to Enable |
+|------------|---------|---------------|
+| **Microphone** | Capture your voice for transcription | Grant when prompted |
+| **Accessibility** | Detect global hotkey from any app | `System Settings → Privacy & Security → Accessibility` |
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Push-to-talk** | Customizable global hotkey (default: `⌥ + Space`) |
+| **Multiple Models** | Choose from tiny to large-v3-turbo |
+| **Auto-copy** | Transcription automatically copied to clipboard |
+| **Auto-paste** | Optionally paste immediately after transcription |
+| **Device Selection** | Choose your preferred microphone |
+| **Visual Feedback** | Floating HUD shows recording/transcription status |
+
+---
+
+## Models
+
+Choose the right balance of speed and accuracy:
+
+| Model | Size | Speed | Accuracy | Best For |
+|-------|------|-------|----------|----------|
+| `tiny` | 39 MB | ⚡⚡⚡⚡⚡ | ★☆☆☆☆ | Quick notes, simple phrases |
+| `base` | 74 MB | ⚡⚡⚡⚡ | ★★☆☆☆ | Everyday use |
+| `small` | 244 MB | ⚡⚡⚡ | ★★★☆☆ | General purpose |
+| `medium` | 769 MB | ⚡⚡ | ★★★★☆ | Accurate transcription |
+| `large-v3` | 1.5 GB | ⚡ | ★★★★★ | Maximum accuracy |
+| `large-v3-turbo` | 809 MB | ⚡⚡⚡⚡ | ★★★★☆ | **Recommended** |
+
+> [!TIP]
+> **Recommendation:** Start with `large-v3-turbo` for the best speed/accuracy balance. Models download automatically on first use.
+
+---
 
 ## Building from Source
 
-Requirements:
+### Requirements
+
 - Xcode 16.2+
+
+### Clone and Build
 
 ```bash
 # Clone the repository
@@ -85,27 +153,24 @@ open whisperX.xcodeproj
 # Build and run (Cmd+R)
 ```
 
-Or build from command line:
+### Command Line Build
 
 ```bash
+# Using Make
+make build-release
+
+# Or directly with xcodebuild
 xcodebuild build -scheme whisperX -configuration Release
 ```
 
-## How It Works
+### Create DMG
 
-1. Press and hold your hotkey (default: `Option + Space`)
-2. Speak
-3. Release — your text is ready to paste
+```bash
+make dmg-release
+```
 
-## Permissions
-
-WhisperX needs two system permissions:
-
-- **Microphone** — To capture your voice
-- **Accessibility** — To detect the global hotkey
-
-Grant these when prompted, or enable manually in `System Settings → Privacy & Security`.
+---
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — Free and open source.
