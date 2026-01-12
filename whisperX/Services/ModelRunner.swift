@@ -89,11 +89,18 @@ nonisolated enum ModelRunnerError: Error, LocalizedError, Sendable {
 /// - The system may reclaim memory under pressure; model will reload on next use.
 ///
 /// ## Model Storage
-/// WhisperKit manages model storage at its default location.
+/// Models are stored in `~/Library/Application Support/whisperX/Models/`.
 /// Models are downloaded from HuggingFace on first use.
 actor ModelRunner {
 
     // MARK: - Properties
+
+    /// Directory for storing downloaded WhisperKit models.
+    /// Uses Application Support to avoid Documents permission prompt.
+    private static var modelsDirectory: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return appSupport.appendingPathComponent("whisperX/Models", isDirectory: true)
+    }
 
     /// The currently loaded WhisperKit pipeline, if any.
     private var whisperKit: WhisperKit?
@@ -256,6 +263,7 @@ actor ModelRunner {
         do {
             let pipe = try await WhisperKit(
                 model: model.whisperKitModelName,
+                downloadBase: Self.modelsDirectory,
                 verbose: false,
                 logLevel: .error,
                 prewarm: true,
