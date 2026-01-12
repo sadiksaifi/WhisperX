@@ -102,40 +102,52 @@ struct UpdateSectionView: View {
 
     @ViewBuilder
     private var updateButton: some View {
-        Button(action: onCheckForUpdates) {
-            switch updateState {
-            case .checking:
-                HStack(spacing: 6) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Checking...")
+        HStack(spacing: 12) {
+            Button(action: onCheckForUpdates) {
+                switch updateState {
+                case .checking:
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Checking...")
+                    }
+                default:
+                    Text("Check for Updates")
                 }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isCheckDisabled)
+
+            // Status indicator (separate from button)
+            switch updateState {
             case .available(let version, _):
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.down.circle.fill")
                         .foregroundStyle(.blue)
-                    Text("Update Available: \(version)")
+                    Text("v\(version) available")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             case .stableNewer(let version, _, _):
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.down.circle.fill")
                         .foregroundStyle(.blue)
-                    Text("Stable Available: \(version)")
+                    Text("Stable v\(version) available")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             case .upToDate:
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text("Up to Date")
+                    Text("Up to date")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
-            case .error:
-                Text("Check for Updates")
             default:
-                Text("Check for Updates")
+                EmptyView()
             }
         }
-        .buttonStyle(.bordered)
-        .disabled(isCheckDisabled)
     }
 
     @ViewBuilder
