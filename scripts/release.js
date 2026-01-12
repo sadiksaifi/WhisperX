@@ -103,6 +103,46 @@ function getLatestPrereleaseCount(type) {
   return matchingTags.length > 0 ? matchingTags[0] : null;
 }
 
+function getLatestTagForType(type) {
+  // Get the latest tag for a specific release type (alpha, beta, or stable)
+  const tags = exec('git tag -l "v*"');
+  if (!tags) return null;
+
+  let pattern;
+  if (type === 'stable') {
+    // Stable tags have no suffix (e.g., v0.1.0)
+    pattern = /^v(\d+)\.(\d+)\.(\d+)$/;
+  } else {
+    // Alpha/beta tags: v0.1.0-alpha.N or v0.1.0-beta.N
+    pattern = new RegExp(`^v(\\d+)\\.(\\d+)\\.(\\d+)-${type}\\.(\\d+)$`);
+  }
+
+  const matchingTags = tags
+    .split('\n')
+    .filter(tag => pattern.test(tag))
+    .sort((a, b) => {
+      // Sort by version components, then by prerelease number
+      const parseTag = (t) => {
+        const match = t.match(/^v(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)\.(\d+))?$/);
+        if (!match) return [0, 0, 0, 0];
+        return [
+          parseInt(match[1]),
+          parseInt(match[2]),
+          parseInt(match[3]),
+          match[5] ? parseInt(match[5]) : 0
+        ];
+      };
+      const [aMaj, aMin, aPat, aPre] = parseTag(a);
+      const [bMaj, bMin, bPat, bPre] = parseTag(b);
+      if (aMaj !== bMaj) return bMaj - aMaj;
+      if (aMin !== bMin) return bMin - aMin;
+      if (aPat !== bPat) return bPat - aPat;
+      return bPre - aPre;
+    });
+
+  return matchingTags[0] || null;
+}
+
 function getHighestBaseVersion() {
   // Get the highest base version from all tags (stable and pre-release)
   // e.g., v0.1.0, v0.1.0-alpha.1, v0.2.0-beta.3 -> returns "0.2.0"
@@ -435,11 +475,13 @@ async function main() {
 
     // Step 6: Generate changelog
     log.step('Generating changelog');
-    const commits = getCommitsSinceTag(latestStable);
+    const latestTagForType = getLatestTagForType(releaseType);
+    log.info(`Latest ${releaseType} tag: ${latestTagForType || 'none'}`);
+    const commits = getCommitsSinceTag(latestTagForType);
     if (commits.length === 0) {
       log.warn('No commits found since last release.');
     } else {
-      log.info(`Found ${commits.length} commits since ${latestStable || 'beginning'}`);
+      log.info(`Found ${commits.length} commits since ${latestTagForType || 'beginning'}`);
     }
 
     const changelogContent = generateChangelogContent(version, commits);
