@@ -70,10 +70,10 @@ struct SettingsView: View {
             HStack {
                 Text("Hold delay:")
                 Picker("", selection: $settings.hotkeyDebounceMs) {
+                    Text("10 ms").tag(10)
+                    Text("20 ms").tag(20)
                     Text("50 ms").tag(50)
                     Text("100 ms").tag(100)
-                    Text("150 ms").tag(150)
-                    Text("200 ms").tag(200)
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()

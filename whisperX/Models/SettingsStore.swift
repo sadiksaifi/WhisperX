@@ -26,7 +26,7 @@ final class SettingsStore {
     /// Default hotkey: Right Option key (keyCode 61).
     static let defaultHotkeyKeyCode: UInt16 = 61
     static let defaultHotkeyModifiers: UInt = 0
-    static let defaultDebounceMs: Int = 100
+    static let defaultDebounceMs: Int = 20
 
     // MARK: - Properties
 
