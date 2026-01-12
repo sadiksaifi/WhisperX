@@ -19,6 +19,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             errorSection
+            permissionWarningSection
             hotkeySection
             modelSection
             audioSection
@@ -33,6 +34,61 @@ struct SettingsView: View {
         }
         .onDisappear {
             audioDeviceManager.stopMonitoring()
+        }
+    }
+
+    // MARK: - Permission Warning Section
+
+    /// Shows a warning banner at the top when permissions are missing.
+    @ViewBuilder
+    private var permissionWarningSection: some View {
+        let micDenied = permissionManager.microphoneStatus == .denied
+        let accessibilityDenied = permissionManager.accessibilityStatus == .denied
+
+        if micDenied || accessibilityDenied {
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.title3)
+                        Text("Permission Required")
+                            .font(.headline)
+                    }
+
+                    if micDenied && accessibilityDenied {
+                        Text("Microphone and Input Monitoring permissions are required for WhisperX to work properly.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    } else if micDenied {
+                        Text("Microphone permission is required to record audio for transcription.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Input Monitoring permission is required to detect the global hotkey.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 12) {
+                        if micDenied {
+                            Button("Fix Microphone") {
+                                permissionManager.openMicrophoneSettings()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                        if accessibilityDenied {
+                            Button("Fix Input Monitoring") {
+                                permissionManager.openAccessibilitySettings()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            }
         }
     }
 
