@@ -59,6 +59,7 @@ playground.xcworkspace
 *.dSYM.zip
 *.dSYM
 *.app
+*.dmg
 
 # Archives
 *.xcarchive
@@ -97,3 +98,7 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Node.js (scripts)
+scripts/node_modules/
+scripts/package-lock.json

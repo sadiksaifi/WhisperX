@@ -57,9 +57,11 @@ actor UpdateService {
 
     // MARK: - Public API
 
-    /// Checks for updates from GitHub releases.
-    /// - Parameter force: If true, ignores minimum check interval.
-    func checkForUpdates(force: Bool = false) async throws {
+    /// Checks for updates from GitHub releases based on the specified channel.
+    /// - Parameters:
+    ///   - channel: The release channel to check for updates.
+    ///   - force: If true, ignores minimum check interval.
+    func checkForUpdates(channel: ReleaseChannel, force: Bool = false) async throws {
         // Rate limit local checks
         if !force, let lastCheck = lastCheckTime,
            Date().timeIntervalSince(lastCheck) < Self.minimumCheckInterval {
@@ -70,22 +72,40 @@ actor UpdateService {
         await updateState(.checking)
 
         do {
-            let release = try await fetchLatestRelease()
+            let releases = try await fetchAllReleases()
             lastCheckTime = Date()
 
-            guard let currentVersion = getCurrentAppVersion(),
-                  let latestVersion = SemanticVersion(string: release.tagName) else {
+            guard let currentVersion = getCurrentAppVersion() else {
                 throw UpdateError.versionParsingFailed
             }
 
-            if latestVersion > currentVersion {
+            // Find the best release for the user's channel
+            let result = findBestRelease(
+                from: releases,
+                forChannel: channel,
+                currentVersion: currentVersion
+            )
+
+            switch result {
+            case .updateAvailable(let release, let version):
                 availableRelease = release
                 await updateState(.available(version: release.tagName, release: release))
                 await notifyUpdateAvailable(release)
                 Logger.update.info("Update available: \(release.tagName) (current: \(currentVersion.description))")
-            } else {
+
+            case .stableNewer(let stableRelease, let stableVersion):
+                // User is on pre-release but stable is newer
+                availableRelease = stableRelease
+                await updateState(.stableNewer(
+                    stableVersion: stableRelease.tagName,
+                    stableRelease: stableRelease,
+                    currentVersion: currentVersion.description
+                ))
+                Logger.update.info("Stable version \(stableRelease.tagName) is newer than current pre-release \(currentVersion.description)")
+
+            case .upToDate:
                 await updateState(.upToDate)
-                Logger.update.info("App is up to date (current: \(currentVersion.description), latest: \(release.tagName))")
+                Logger.update.info("App is up to date (current: \(currentVersion.description))")
             }
         } catch {
             let message = (error as? UpdateError)?.errorDescription ?? error.localizedDescription
@@ -156,8 +176,16 @@ actor UpdateService {
 
     // MARK: - Private Methods
 
-    private func fetchLatestRelease() async throws -> GitHubRelease {
-        guard let url = URL(string: "\(Self.apiBaseURL)/latest") else {
+    /// Result of searching for the best update.
+    private enum UpdateSearchResult {
+        case updateAvailable(release: GitHubRelease, version: SemanticVersion)
+        case stableNewer(stableRelease: GitHubRelease, stableVersion: SemanticVersion)
+        case upToDate
+    }
+
+    /// Fetches all releases from GitHub (limited to most recent 30).
+    private func fetchAllReleases() async throws -> [GitHubRelease] {
+        guard let url = URL(string: "\(Self.apiBaseURL)?per_page=30") else {
             throw UpdateError.networkError(underlying: "Invalid API URL")
         }
 
@@ -189,7 +217,64 @@ actor UpdateService {
         }
 
         let decoder = JSONDecoder()
-        return try decoder.decode(GitHubRelease.self, from: data)
+        let releases = try decoder.decode([GitHubRelease].self, from: data)
+
+        if releases.isEmpty {
+            throw UpdateError.noReleasesFound
+        }
+
+        return releases
+    }
+
+    /// Finds the best release for the given channel and current version.
+    private func findBestRelease(
+        from releases: [GitHubRelease],
+        forChannel channel: ReleaseChannel,
+        currentVersion: SemanticVersion
+    ) -> UpdateSearchResult {
+        // Parse all releases into (release, version) tuples
+        let parsedReleases: [(GitHubRelease, SemanticVersion)] = releases.compactMap { release in
+            guard let version = SemanticVersion(string: release.tagName) else { return nil }
+            return (release, version)
+        }
+
+        // Find the latest stable release
+        let latestStable = parsedReleases
+            .filter { $0.1.channel == .stable }
+            .max { $0.1 < $1.1 }
+
+        // Filter releases based on channel preference
+        let eligibleReleases: [(GitHubRelease, SemanticVersion)]
+        switch channel {
+        case .stable:
+            // Only stable releases
+            eligibleReleases = parsedReleases.filter { $0.1.channel == .stable }
+        case .beta:
+            // Beta and stable releases
+            eligibleReleases = parsedReleases.filter { $0.1.channel == .stable || $0.1.channel == .beta }
+        case .alpha:
+            // All releases (alpha, beta, stable)
+            eligibleReleases = parsedReleases
+        }
+
+        // Find the newest eligible release
+        guard let (bestRelease, bestVersion) = eligibleReleases.max(by: { $0.1 < $1.1 }) else {
+            return .upToDate
+        }
+
+        // Check if update is available
+        if bestVersion > currentVersion {
+            return .updateAvailable(release: bestRelease, version: bestVersion)
+        }
+
+        // Special case: user is on pre-release, check if stable is newer
+        if currentVersion.channel != .stable,
+           let (stableRelease, stableVersion) = latestStable,
+           stableVersion > currentVersion {
+            return .stableNewer(stableRelease: stableRelease, stableVersion: stableVersion)
+        }
+
+        return .upToDate
     }
 
     private func getCurrentAppVersion() -> SemanticVersion? {

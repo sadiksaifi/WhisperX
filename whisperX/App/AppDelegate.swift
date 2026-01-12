@@ -64,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Check for updates on launch if enabled
         if settings.checkUpdatesOnLaunch {
             Task {
-                try? await updateService.checkForUpdates()
+                try? await updateService.checkForUpdates(channel: settings.updateChannel)
             }
         }
 
@@ -448,7 +448,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func checkForUpdates() {
         Task {
             do {
-                try await updateService.checkForUpdates(force: true)
+                try await updateService.checkForUpdates(channel: settings.updateChannel, force: true)
             } catch {
                 Logger.update.error("Update check failed: \(error)")
             }

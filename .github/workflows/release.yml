@@ -23,22 +23,38 @@ jobs:
 
       - name: Build Release
         run: |
+          # Strip 'v' prefix from tag to get version (e.g., v0.1.0-alpha.1 -> 0.1.0-alpha.1)
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+
           xcodebuild build \
             -scheme whisperX \
             -configuration Release \
             -derivedDataPath build \
+            MARKETING_VERSION="${VERSION}" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Install create-dmg
+        run: brew install create-dmg
 
       - name: Create DMG
         run: |
           APP_PATH="build/Build/Products/Release/WhisperX.app"
 
-          hdiutil create -volname "WhisperX" \
-            -srcfolder "$APP_PATH" \
-            -ov -format UDZO \
-            "WhisperX-${{ github.ref_name }}.dmg"
+          create-dmg \
+            --volname "WhisperX" \
+            --background "scripts/dmg-resources/background.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "WhisperX.app" 150 185 \
+            --hide-extension "WhisperX.app" \
+            --app-drop-link 450 185 \
+            --no-internet-enable \
+            "WhisperX-${{ github.ref_name }}.dmg" \
+            "$APP_PATH"
 
       - name: Generate Release Notes
         run: |

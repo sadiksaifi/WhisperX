@@ -24,11 +24,56 @@ struct UpdateSectionView: View {
                     .foregroundStyle(.secondary)
             }
 
+            // Dev build warning
+            if settings.isDevBuild {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "hammer.fill")
+                        .foregroundStyle(.purple)
+                    Text("This is a development build. It may be unstable and is not intended for regular use.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // Update channel picker
+            Picker("Update Channel", selection: $settings.updateChannel) {
+                Text("Stable").tag(ReleaseChannel.stable)
+                Text("Beta").tag(ReleaseChannel.beta)
+                // Only show Alpha option if user is running an alpha or dev build
+                if settings.detectedChannel == .alpha {
+                    Text("Alpha").tag(ReleaseChannel.alpha)
+                }
+            }
+
+            // Warning for non-stable channels (only if not already showing dev warning)
+            if settings.updateChannel != .stable && !settings.isDevBuild {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(settings.updateChannel == .alpha
+                         ? "Alpha releases are experimental and may have significant bugs."
+                         : "Beta releases may contain bugs and incomplete features.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             // Check for updates button with state
             HStack {
                 updateButton
                 Spacer()
                 actionButton
+            }
+
+            // Stable newer notification
+            if case .stableNewer(let stableVersion, _, let currentVer) = updateState {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(.blue)
+                    Text("A stable release (\(stableVersion)) is available. You're currently on \(currentVer).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             // Error display
@@ -71,6 +116,12 @@ struct UpdateSectionView: View {
                         .foregroundStyle(.blue)
                     Text("Update Available: \(version)")
                 }
+            case .stableNewer(let version, _, _):
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundStyle(.blue)
+                    Text("Stable Available: \(version)")
+                }
             case .upToDate:
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
@@ -90,7 +141,7 @@ struct UpdateSectionView: View {
     @ViewBuilder
     private var actionButton: some View {
         switch updateState {
-        case .available:
+        case .available, .stableNewer:
             Button("Download", action: onDownloadUpdate)
                 .buttonStyle(.borderedProminent)
         case .downloading(let progress):

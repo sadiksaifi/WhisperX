@@ -18,6 +18,7 @@ final class SettingsStore {
         static let pasteAfterCopy = "pasteAfterCopy"
         static let checkUpdatesOnLaunch = "checkUpdatesOnLaunch"
         static let autoUpdateEnabled = "autoUpdateEnabled"
+        static let updateChannel = "updateChannel"
     }
 
     // MARK: - Defaults
@@ -76,6 +77,19 @@ final class SettingsStore {
         didSet { defaults.set(autoUpdateEnabled, forKey: Keys.autoUpdateEnabled) }
     }
 
+    /// The update channel preference (stable, beta, alpha).
+    var updateChannel: ReleaseChannel {
+        didSet { defaults.set(updateChannel.rawValue, forKey: Keys.updateChannel) }
+    }
+
+    /// The release channel detected from the current app version.
+    /// Determined at launch based on the app's version string.
+    private(set) var detectedChannel: ReleaseChannel
+
+    /// Whether the current app is a development build (e.g., 0.1.0-dev.2).
+    /// Dev builds are local builds not distributed via GitHub releases.
+    private(set) var isDevBuild: Bool
+
     // MARK: - Private
 
     private let defaults: UserDefaults
@@ -106,5 +120,28 @@ final class SettingsStore {
         self.pasteAfterCopy = defaults.object(forKey: Keys.pasteAfterCopy) as? Bool ?? false
         self.checkUpdatesOnLaunch = defaults.object(forKey: Keys.checkUpdatesOnLaunch) as? Bool ?? true
         self.autoUpdateEnabled = defaults.object(forKey: Keys.autoUpdateEnabled) as? Bool ?? false
+
+        // Detect current app's release channel and dev build status from version string
+        let detected: ReleaseChannel
+        let isDev: Bool
+        if let versionString = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+           let version = SemanticVersion(string: versionString) {
+            detected = version.channel
+            isDev = version.preRelease.isDev
+        } else {
+            detected = .stable
+            isDev = false
+        }
+        self.detectedChannel = detected
+        self.isDevBuild = isDev
+
+        // Load persisted update channel, defaulting to detected channel
+        if let channelRaw = defaults.string(forKey: Keys.updateChannel),
+           let channel = ReleaseChannel(rawValue: channelRaw) {
+            self.updateChannel = channel
+        } else {
+            // Default to the detected channel (what the user installed)
+            self.updateChannel = detected
+        }
     }
 }
