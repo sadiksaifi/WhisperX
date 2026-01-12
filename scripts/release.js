@@ -103,6 +103,34 @@ function getLatestPrereleaseCount(type) {
   return matchingTags.length > 0 ? matchingTags[0] : null;
 }
 
+function getHighestBaseVersion() {
+  // Get the highest base version from all tags (stable and pre-release)
+  // e.g., v0.1.0, v0.1.0-alpha.1, v0.2.0-beta.3 -> returns "0.2.0"
+  const tags = exec('git tag -l "v*"');
+  if (!tags) return null;
+
+  const versions = tags
+    .split('\n')
+    .map(tag => {
+      const match = tag.match(/^v?(\d+)\.(\d+)\.(\d+)/);
+      if (!match) return null;
+      return {
+        major: parseInt(match[1]),
+        minor: parseInt(match[2]),
+        patch: parseInt(match[3]),
+        str: `${match[1]}.${match[2]}.${match[3]}`,
+      };
+    })
+    .filter(v => v !== null)
+    .sort((a, b) => {
+      if (a.major !== b.major) return b.major - a.major;
+      if (a.minor !== b.minor) return b.minor - a.minor;
+      return b.patch - a.patch;
+    });
+
+  return versions.length > 0 ? versions[0].str : null;
+}
+
 function tagExists(tag) {
   const result = exec(`git tag -l "${tag}"`);
   return result === tag;
@@ -147,8 +175,14 @@ function calculateVersion(type, latestStableTag) {
     return null; // No new commits
   }
 
-  // Extract base version from tag (e.g., v0.1.0 -> 0.1.0)
-  const baseVersion = latestStableTag ? latestStableTag.replace(/^v/, '') : '0.0.0';
+  // Use highest base version from all tags (stable or pre-release)
+  // Falls back to stable tag, then to 0.1.0 if nothing exists
+  let baseVersion;
+  if (latestStableTag) {
+    baseVersion = latestStableTag.replace(/^v/, '');
+  } else {
+    baseVersion = getHighestBaseVersion() || '0.1.0';
+  }
 
   return `${baseVersion}-${type}.${commitCount}`;
 }
@@ -343,7 +377,11 @@ async function main() {
     // Step 4: Calculate or get version
     log.step('Determining version');
     const latestStable = getLatestStableTag();
+    const highestBase = getHighestBaseVersion();
     log.info(`Latest stable tag: ${latestStable || 'none'}`);
+    if (highestBase && !latestStable) {
+      log.info(`Highest base version (from pre-release): ${highestBase}`);
+    }
 
     let version;
     if (releaseType === 'stable') {
@@ -351,6 +389,22 @@ async function main() {
       if (!version || !version.match(/^\d+\.\d+\.\d+$/)) {
         log.error('Invalid version format. Use X.Y.Z (e.g., 0.2.0)');
         process.exit(1);
+      }
+      // Validate stable version is >= highest existing base version
+      if (highestBase) {
+        const parseVer = (v) => {
+          const m = v.match(/(\d+)\.(\d+)\.(\d+)/);
+          return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : [0, 0, 0];
+        };
+        const [newMaj, newMin, newPatch] = parseVer(version);
+        const [oldMaj, oldMin, oldPatch] = parseVer(highestBase);
+        const isValid = newMaj > oldMaj ||
+          (newMaj === oldMaj && newMin > oldMin) ||
+          (newMaj === oldMaj && newMin === oldMin && newPatch >= oldPatch);
+        if (!isValid) {
+          log.error(`Stable version must be >= ${highestBase} (highest existing version).`);
+          process.exit(1);
+        }
       }
     } else {
       version = calculateVersion(releaseType, latestStable);
