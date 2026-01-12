@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.37] - 2026-01-12
+
+### Added
+- split update button and status
+  - decouple update status display from the trigger button
+  - show version availability and success states in a separate label
+  - use callout font and secondary color for status information
+  - simplify button states to focus on the checking action
+- add permission warning banner
+  - show banner in settings when permissions are missing
+  - add buttons to open system mic and accessibility settings
+  - provide context-specific messages for missing permissions
+- open settings on tap
+  - add tap gesture to HUD view
+  - implement tap callback in HUD window controller
+  - show settings window when HUD is tapped
+- add launch hud and reopen behavior
+  - show feedback HUD when application starts
+  - open settings when app is reopened via Dock
+  - add launched state and indicator to HUD
+  - auto-hide launch HUD after two seconds
+
+### Fixed
+- reset tcc after install
+  - reset Accessibility and Microphone permissions after copying the new bundle so macOS stops treating it as a different app
+  - log the reset step to make investigating post-update permission issues easier
+
 ## [0.1.0-alpha.31] - 2026-01-12
 
 ### Fixed
