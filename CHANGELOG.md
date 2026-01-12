@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.29] - 2026-01-12
+
+### Fixed
+- add installer logging
+  - log DMG and ZIP install steps/errors to /tmp/whisperx-update.log
+  - exit when mounting/extracting fails to avoid partial installs
+
+### Documentation
+- update model descriptions
+  - clarify the default model choice and turbo recommendation in the README table tip
+  - document benchmark-based speed ratings for each Whisper model with inline notes
+- update build instructions
+  - refresh AGENTS.md to lean on make targets for building, installing, and packaging plus note docs references
+  - fold README build section into collapsible block and highlight the make-driven workflow, version note, and dmg options
+
+### Maintenance
+- use latest type tag
+  - query latest tag per release type before collecting commits
+  - log the matched tag and use it when generating the changelog
+
 ## [0.1.0-alpha.24] - 2026-01-12
 
 ### Added
