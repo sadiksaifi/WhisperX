@@ -78,14 +78,15 @@ nonisolated enum WhisperModel: String, CaseIterable, Codable, Identifiable, Send
     }
 
     /// Relative speed rating (1-5, higher is faster).
+    /// Based on OpenAI benchmarks: tiny ~10x, turbo ~8x, base ~7x, small ~4x, medium ~2x, large 1x
     nonisolated var speedRating: Int {
         switch self {
-        case .tiny: return 5
-        case .base: return 4
-        case .small: return 3
-        case .medium: return 2
-        case .large: return 1
-        case .largeTurbo: return 3
+        case .tiny: return 5      // ~10x
+        case .base: return 4      // ~7x
+        case .small: return 3     // ~4x
+        case .medium: return 2    // ~2x
+        case .large: return 1     // 1x (baseline)
+        case .largeTurbo: return 4 // ~8x (faster than base)
         }
     }
 

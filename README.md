@@ -122,15 +122,15 @@ Choose the right balance of speed and accuracy:
 
 | Model | Size | Speed | Accuracy | Best For |
 |-------|------|-------|----------|----------|
-| `tiny` | 39 MB | ⚡⚡⚡⚡⚡ | ★☆☆☆☆ | Quick notes, simple phrases |
-| `base` | 74 MB | ⚡⚡⚡⚡ | ★★☆☆☆ | Everyday use |
-| `small` | 244 MB | ⚡⚡⚡ | ★★★☆☆ | General purpose |
-| `medium` | 769 MB | ⚡⚡ | ★★★★☆ | Accurate transcription |
-| `large-v3` | 1.5 GB | ⚡ | ★★★★★ | Maximum accuracy |
-| `large-v3-turbo` | 809 MB | ⚡⚡⚡⚡ | ★★★★☆ | **Recommended** |
+| `tiny` | ~39 MB | ⚡⚡⚡⚡⚡ | ★☆☆☆☆ | Quick drafts |
+| `base` | ~74 MB | ⚡⚡⚡⚡ | ★★☆☆☆ | **Default** - everyday use |
+| `small` | ~244 MB | ⚡⚡⚡ | ★★★☆☆ | General purpose |
+| `medium` | ~769 MB | ⚡⚡ | ★★★★☆ | Accurate transcription |
+| `large-v3` | ~1.5 GB | ⚡ | ★★★★★ | Maximum accuracy |
+| `large-v3-turbo` | ~809 MB | ⚡⚡⚡⚡ | ★★★★★ | Fast + accurate |
 
 > [!TIP]
-> **Recommendation:** Start with `large-v3-turbo` for the best speed/accuracy balance. Models download automatically on first use.
+> The app defaults to `base` for fast startup. Switch to `large-v3-turbo` for near-maximum accuracy with great speed. Models download automatically on first use.
 
 ---
 
