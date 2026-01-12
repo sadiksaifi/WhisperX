@@ -203,6 +203,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         hudWindowController = HUDWindowController(appState: appState)
+        hudWindowController.onTap = { [weak self] in
+            self?.showSettings()
+        }
 
         Logger.app.debug("Window controllers initialized")
     }

@@ -10,6 +10,9 @@ final class HUDWindowController: NSWindowController {
     private let appState: AppState
     private var stateObservation: AnyCancellable?
 
+    /// Callback invoked when user taps on the HUD.
+    var onTap: (() -> Void)?
+
     init(appState: AppState) {
         self.appState = appState
 
@@ -29,11 +32,17 @@ final class HUDWindowController: NSWindowController {
 
         super.init(window: panel)
 
-        let hostingView = NSHostingView(rootView: HUDView(appState: appState))
-        panel.contentView = hostingView
-
+        setupContentView()
         positionAtBottomCenter()
         observeStateChanges()
+    }
+
+    private func setupContentView() {
+        let hudView = HUDView(appState: appState) { [weak self] in
+            self?.onTap?()
+        }
+        let hostingView = NSHostingView(rootView: hudView)
+        window?.contentView = hostingView
     }
 
     /// Observe state changes to recenter HUD when content size changes.

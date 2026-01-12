@@ -4,6 +4,7 @@ import SwiftUI
 /// Displays only a state indicator (icon + one or two words).
 struct HUDView: View {
     @Bindable var appState: AppState
+    var onTap: (() -> Void)?
 
     var body: some View {
         statusIndicator
@@ -12,6 +13,10 @@ struct HUDView: View {
             .background(.ultraThinMaterial, in: Capsule())
             .clipShape(Capsule())
             .fixedSize()
+            .contentShape(Capsule())
+            .onTapGesture {
+                onTap?()
+            }
     }
 
     /// Status indicator with priority: error > copied > launched > recording > transcribing > idle.
