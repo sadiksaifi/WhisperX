@@ -338,17 +338,40 @@ actor UpdateService {
         if fileURL.pathExtension == "dmg" {
             scriptContent = """
             #!/bin/bash
+            set -e
+            LOG_FILE="/tmp/whisperx-update.log"
+            echo "$(date): Starting update installation" > "$LOG_FILE"
+
             sleep 2
-            MOUNT_POINT=$(hdiutil attach "\(fileURL.path)" -nobrowse -quiet | tail -1 | cut -f3)
+
+            # Mount DMG (note: -quiet suppresses output, so we don't use it)
+            MOUNT_OUTPUT=$(hdiutil attach "\(fileURL.path)" -nobrowse 2>&1)
+            if [ $? -ne 0 ]; then
+                echo "$(date): Failed to mount DMG: $MOUNT_OUTPUT" >> "$LOG_FILE"
+                exit 1
+            fi
+
+            MOUNT_POINT=$(echo "$MOUNT_OUTPUT" | tail -1 | cut -f3)
+            echo "$(date): Mount point: $MOUNT_POINT" >> "$LOG_FILE"
+
+            if [ -z "$MOUNT_POINT" ]; then
+                echo "$(date): Failed to get mount point from output" >> "$LOG_FILE"
+                exit 1
+            fi
+
             if [ -d "$MOUNT_POINT/\(appName)" ]; then
+                echo "$(date): Found app at $MOUNT_POINT/\(appName)" >> "$LOG_FILE"
                 rm -rf "\(appBundle.path)"
                 cp -R "$MOUNT_POINT/\(appName)" "\(parentDir.path)/"
                 hdiutil detach "$MOUNT_POINT" -quiet
                 rm -f "\(fileURL.path)"
+                echo "$(date): Update installed successfully, launching app" >> "$LOG_FILE"
                 open "\(appBundle.path)"
             else
-                echo "App not found in DMG"
+                echo "$(date): App not found in DMG at $MOUNT_POINT/\(appName)" >> "$LOG_FILE"
+                ls -la "$MOUNT_POINT" >> "$LOG_FILE" 2>&1
                 hdiutil detach "$MOUNT_POINT" -quiet 2>/dev/null
+                exit 1
             fi
             rm -f "$0"
             """
@@ -356,18 +379,35 @@ actor UpdateService {
             // ZIP file
             scriptContent = """
             #!/bin/bash
+            set -e
+            LOG_FILE="/tmp/whisperx-update.log"
+            echo "$(date): Starting update installation (ZIP)" > "$LOG_FILE"
+
             sleep 2
+
             TEMP_DIR=$(mktemp -d)
+            echo "$(date): Extracting to $TEMP_DIR" >> "$LOG_FILE"
+
             unzip -q "\(fileURL.path)" -d "$TEMP_DIR"
+            if [ $? -ne 0 ]; then
+                echo "$(date): Failed to extract ZIP" >> "$LOG_FILE"
+                rm -rf "$TEMP_DIR"
+                exit 1
+            fi
+
             if [ -d "$TEMP_DIR/\(appName)" ]; then
+                echo "$(date): Found app at $TEMP_DIR/\(appName)" >> "$LOG_FILE"
                 rm -rf "\(appBundle.path)"
                 mv "$TEMP_DIR/\(appName)" "\(parentDir.path)/"
                 rm -rf "$TEMP_DIR"
                 rm -f "\(fileURL.path)"
+                echo "$(date): Update installed successfully, launching app" >> "$LOG_FILE"
                 open "\(appBundle.path)"
             else
-                echo "App not found in ZIP"
+                echo "$(date): App not found in ZIP at $TEMP_DIR/\(appName)" >> "$LOG_FILE"
+                ls -la "$TEMP_DIR" >> "$LOG_FILE" 2>&1
                 rm -rf "$TEMP_DIR"
+                exit 1
             fi
             rm -f "$0"
             """
