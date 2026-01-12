@@ -365,6 +365,13 @@ actor UpdateService {
                 cp -R "$MOUNT_POINT/\(appName)" "\(parentDir.path)/"
                 hdiutil detach "$MOUNT_POINT" -quiet
                 rm -f "\(fileURL.path)"
+
+                # Clear stale TCC entries to avoid "ghost permissions" after update
+                # Without code signing, macOS sees the new binary as a different app
+                echo "$(date): Clearing stale TCC entries" >> "$LOG_FILE"
+                tccutil reset Accessibility com.sadiksaifi.whisperX 2>/dev/null || true
+                tccutil reset Microphone com.sadiksaifi.whisperX 2>/dev/null || true
+
                 echo "$(date): Update installed successfully, launching app" >> "$LOG_FILE"
                 open "\(appBundle.path)"
             else
@@ -401,6 +408,13 @@ actor UpdateService {
                 mv "$TEMP_DIR/\(appName)" "\(parentDir.path)/"
                 rm -rf "$TEMP_DIR"
                 rm -f "\(fileURL.path)"
+
+                # Clear stale TCC entries to avoid "ghost permissions" after update
+                # Without code signing, macOS sees the new binary as a different app
+                echo "$(date): Clearing stale TCC entries" >> "$LOG_FILE"
+                tccutil reset Accessibility com.sadiksaifi.whisperX 2>/dev/null || true
+                tccutil reset Microphone com.sadiksaifi.whisperX 2>/dev/null || true
+
                 echo "$(date): Update installed successfully, launching app" >> "$LOG_FILE"
                 open "\(appBundle.path)"
             else
