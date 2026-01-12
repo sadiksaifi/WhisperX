@@ -6,13 +6,34 @@ This file provides guidance to AI agents like you when working with code in this
 
 ```bash
 # Build (Debug)
-xcodebuild build -scheme whisperX -configuration Debug
+make build-debug
 
 # Build (Release)
-xcodebuild build -scheme whisperX -configuration Release
+make build-release
 
-# Open in Xcode (Cmd+B to build, Cmd+R to run)
-open whisperX.xcodeproj
+# Build and run
+make run
+
+# Create DMG installer (auto-versioned from git tags)
+make dmg-release
+
+# Show current version
+make version
+
+# Open in Xcode
+make open
+
+# Clean build artifacts
+make clean
+
+# Install development dependencies
+make setup
+```
+
+**Alternative (xcodebuild directly):**
+```bash
+xcodebuild build -scheme whisperX -configuration Debug
+xcodebuild build -scheme whisperX -configuration Release
 ```
 
 No test or lint infrastructure is currently configured.
@@ -65,8 +86,9 @@ WhisperX is a macOS menu bar app for push-to-talk transcription using WhisperKit
 - **Hardened Runtime enabled** - Security requirement
 - **Accessibility permission required** - For global hotkey monitoring
 - **Microphone permission required** - For audio recording
-- **macOS 26.2+ / Xcode 16.2+** - Build requirements
+- **macOS 15.0+ / Xcode 16.2+** - Build requirements
 
-## Specs Directory
+## Documentation
 
-The `specs/` directory contains step-by-step implementation specs (step-1.md through step-5.md). Follow the execution protocol in `specs/SPECS.md` when implementing new features: one step at a time, verify before proceeding.
+- `docs/RELEASES.md` - Release workflow, versioning, and update channels
+- `docs/RELEASE_GUIDE.md` - Step-by-step release guide

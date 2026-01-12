@@ -134,7 +134,8 @@ Choose the right balance of speed and accuracy:
 
 ---
 
-## Building from Source
+<details>
+<summary><h2>Building from Source</h2></summary>
 
 ### Requirements
 
@@ -156,18 +157,36 @@ open whisperX.xcodeproj
 ### Command Line Build
 
 ```bash
-# Using Make
+# Install development dependencies (first time only)
+make setup
+
+# Build debug app
+make build-debug
+
+# Build release app
 make build-release
 
-# Or directly with xcodebuild
-xcodebuild build -scheme whisperX -configuration Release
+# Build and run
+make run
+
+# Show current version (auto-calculated from git tags)
+make version
 ```
 
 ### Create DMG
 
 ```bash
+# Create release DMG (auto-versioned)
 make dmg-release
+
+# Create DMG with specific version
+make VERSION=1.0.0 dmg-release
 ```
+
+> [!NOTE]
+> Versions are automatically calculated from git tags (e.g., `0.1.0-dev.2` means 2 commits after `v0.1.0`). See `docs/RELEASES.md` for release workflow details.
+
+</details>
 
 ---
 
