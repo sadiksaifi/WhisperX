@@ -14,7 +14,7 @@ struct HUDView: View {
             .fixedSize()
     }
 
-    /// Status indicator with priority: error > copied > recording > transcribing > idle.
+    /// Status indicator with priority: error > copied > launched > recording > transcribing > idle.
     @ViewBuilder
     private var statusIndicator: some View {
         switch appState.hudFeedback {
@@ -22,6 +22,8 @@ struct HUDView: View {
             ErrorIndicator()
         case .copied:
             CopiedIndicator()
+        case .launched:
+            LaunchedIndicator()
         case .none:
             switch appState.recordingState {
             case .idle:
@@ -102,6 +104,21 @@ private struct ErrorIndicator: View {
                 .fill(.red)
                 .frame(width: 8, height: 8)
             Text("Error")
+                .font(.body)
+        }
+    }
+}
+
+// MARK: - Launched Indicator
+
+/// Indicator shown briefly when app first launches.
+private struct LaunchedIndicator: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "waveform")
+                .font(.body)
+                .foregroundStyle(.secondary)
+            Text("WhisperX")
                 .font(.body)
         }
     }

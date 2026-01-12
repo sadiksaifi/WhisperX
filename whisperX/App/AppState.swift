@@ -50,6 +50,15 @@ final class AppState {
             if hudFeedback == .error { hudFeedback = .none }
         }
     }
+
+    /// Shows launch feedback in HUD and auto-clears after delay.
+    func showLaunchedFeedback() {
+        hudFeedback = .launched
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.0))
+            if hudFeedback == .launched { hudFeedback = .none }
+        }
+    }
 }
 
 // MARK: - HUDFeedbackState
@@ -62,6 +71,8 @@ enum HUDFeedbackState: Equatable, Sendable {
     case copied
     /// Show red dot + "Error" indicator.
     case error
+    /// Show waveform + "WhisperX" on first launch.
+    case launched
 }
 
 // MARK: - RecordingState

@@ -56,6 +56,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Start in accessory mode (no dock icon)
         NSApp.setActivationPolicy(.accessory)
 
+        // Show launch feedback HUD so user knows app started
+        appState.showLaunchedFeedback()
+        showHUD()
+        scheduleHideHUD(after: 2.0)
+
         // Check and request permissions
         Task {
             await checkPermissions()
@@ -93,6 +98,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         // Don't quit when windows close; we're a menu bar app
         false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // When user tries to open the app while it's already running,
+        // show the Settings window instead of doing nothing
+        showSettings()
+        return false
     }
 
     // MARK: - Setup
