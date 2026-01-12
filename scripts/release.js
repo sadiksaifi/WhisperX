@@ -80,9 +80,27 @@ function getLatestStableTag() {
 }
 
 function getCommitCountSinceTag(tag) {
-  if (!tag) return 0;
-  const count = exec(`git rev-list ${tag}..HEAD --count`);
+  const cmd = tag ? `git rev-list ${tag}..HEAD --count` : `git rev-list HEAD --count`;
+  const count = exec(cmd);
   return count ? parseInt(count) : 0;
+}
+
+function getLatestPrereleaseCount(type) {
+  // Get the latest alpha/beta tag and extract its count (e.g., v0.1.0-alpha.5 -> 5)
+  const tags = exec('git tag -l "v*"');
+  if (!tags) return null;
+
+  const pattern = new RegExp(`-${type}\\.(\\d+)$`);
+  const matchingTags = tags
+    .split('\n')
+    .filter(tag => pattern.test(tag))
+    .map(tag => {
+      const match = tag.match(pattern);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .sort((a, b) => b - a);
+
+  return matchingTags.length > 0 ? matchingTags[0] : null;
 }
 
 function tagExists(tag) {
@@ -339,6 +357,17 @@ async function main() {
       if (!version) {
         log.error('No new commits since last stable release. Nothing to release.');
         process.exit(1);
+      }
+
+      // Validate beta has >= commits than latest alpha
+      if (releaseType === 'beta') {
+        const latestAlphaCount = getLatestPrereleaseCount('alpha');
+        const currentCount = getCommitCountSinceTag(latestStable);
+        if (latestAlphaCount !== null && currentCount < latestAlphaCount) {
+          log.error(`Beta release requires at least ${latestAlphaCount} commits (latest alpha count).`);
+          log.info(`Current commit count: ${currentCount}`);
+          process.exit(1);
+        }
       }
     }
 
