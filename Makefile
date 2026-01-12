@@ -162,6 +162,10 @@ clean-all: clean
 version:
 	@echo "$(VERSION)"
 
+## release: Run interactive release script
+release:
+	@node scripts/release.js
+
 # ============================================================================
 # Help
 # ============================================================================
