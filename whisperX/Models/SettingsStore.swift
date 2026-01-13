@@ -26,7 +26,7 @@ final class SettingsStore {
     /// Default hotkey: Right Option key (keyCode 61).
     static let defaultHotkeyKeyCode: UInt16 = 61
     static let defaultHotkeyModifiers: UInt = 0
-    static let defaultDebounceMs: Int = 20
+    static let defaultDebounceMs: Int = 10
 
     // MARK: - Properties
 
@@ -40,7 +40,7 @@ final class SettingsStore {
         didSet { defaults.set(hotkeyModifiers, forKey: Keys.hotkeyModifiers) }
     }
 
-    /// Debounce interval in milliseconds before recording starts (default 100ms).
+    /// Debounce interval in milliseconds before recording starts (default 20ms).
     /// Prevents accidental starts from quick taps.
     var hotkeyDebounceMs: Int {
         didSet { defaults.set(hotkeyDebounceMs, forKey: Keys.hotkeyDebounceMs) }
