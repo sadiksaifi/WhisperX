@@ -632,8 +632,9 @@ extension AppDelegate: HotkeyServiceDelegate {
         // so the sound has time to play
         soundFeedback.playStartSound()
 
-        // Small delay to let the sound play before muting and starting recording
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+        // Minimal delay to let the sound start before muting and starting recording
+        // Keep this short (5ms) to support quick recordings
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.005) { [weak self] in
             guard let self = self else { return }
 
             // Check we're still in recording state (user might have released key)
@@ -670,7 +671,7 @@ extension AppDelegate: HotkeyServiceDelegate {
             return
         }
 
-        // Check if recording actually started (user might have released during the 150ms delay)
+        // Check if recording actually started (user might have released during the 5ms delay)
         guard audioRecorder.isRecording else {
             Logger.hotkey.debug("Recording not yet started, cancelling")
             appState.recordingState = .idle

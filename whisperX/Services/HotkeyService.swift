@@ -42,7 +42,8 @@ final class HotkeyService {
     // MARK: - Configuration
 
     /// Default debounce interval in seconds.
-    static let defaultDebounceInterval: TimeInterval = 0.1
+    /// 10ms is short enough to feel instant but still filters out accidental taps.
+    static let defaultDebounceInterval: TimeInterval = 0.01
 
     /// Default key code: Right Option key (keyCode 61).
     /// Right Option is ideal for push-to-talk: easy to reach, rarely used alone,
@@ -332,8 +333,15 @@ final class HotkeyService {
     /// Timestamp when key was pressed (for timing analysis)
     private var keyDownTime: Date?
 
-    /// Handles key down event with debounce logic.
+    /// Handles key down event - dispatches to main queue for thread safety.
     private func handleKeyDown() {
+        DispatchQueue.main.async { [weak self] in
+            self?.handleKeyDownOnMain()
+        }
+    }
+
+    /// Handles key down event with debounce logic (runs on main queue).
+    private func handleKeyDownOnMain() {
         // Already down, ignore (shouldn't happen with repeat filtering)
         guard !isKeyDown else { return }
         isKeyDown = true
@@ -358,11 +366,9 @@ final class HotkeyService {
             self.hasPassedDebounce = true
             Logger.hotkey.info("Debounce passed, triggering press")
 
-            // Dispatch to main actor
-            DispatchQueue.main.async {
-                Task { @MainActor in
-                    self.delegate?.hotkeyDidPress()
-                }
+            // Already on main queue, dispatch to MainActor
+            Task { @MainActor in
+                self.delegate?.hotkeyDidPress()
             }
         }
 
@@ -370,8 +376,15 @@ final class HotkeyService {
         DispatchQueue.main.asyncAfter(deadline: .now() + debounceInterval, execute: workItem)
     }
 
-    /// Handles key up event.
+    /// Handles key up event - dispatches to main queue for thread safety.
     private func handleKeyUp() {
+        DispatchQueue.main.async { [weak self] in
+            self?.handleKeyUpOnMain()
+        }
+    }
+
+    /// Handles key up event (runs on main queue).
+    private func handleKeyUpOnMain() {
         guard isKeyDown else { return }
         isKeyDown = false
 
@@ -386,11 +399,9 @@ final class HotkeyService {
         if hasPassedDebounce {
             Logger.hotkey.info("Key released after debounce, triggering release")
 
-            // Dispatch to main actor
-            DispatchQueue.main.async {
-                Task { @MainActor in
-                    self.delegate?.hotkeyDidRelease()
-                }
+            // Already on main queue, dispatch to MainActor
+            Task { @MainActor in
+                self.delegate?.hotkeyDidRelease()
             }
         } else {
             Logger.hotkey.debug("Key released before debounce (\(String(format: "%.0f", holdDuration))ms < \(Int(self.debounceInterval * 1000))ms), ignoring")
